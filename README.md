@@ -1,11 +1,20 @@
 # deeplearning-repo-3
 딥러닝 프로젝트 3조. 이미지 분석을 통하여 사람의 특징을 추출하고 예측하는 딥러닝
-![Screenshot from 2024-03-20 16-24-43](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/9b9021f6-61fa-42b8-b426-15b0e7d25e72)
 
-![Screenshot from 2024-03-20 11-24-14](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/f485551d-81ec-481c-96ac-938844ed96dc)
+-------------------------------------
 
-![Screenshot from 2024-03-20 09-54-59](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/d4c7fa73-56da-41b3-a8eb-217d03534a1c)
+## 역할
+* 개별 역할
+* 김영환 - 나이 인식 기능, 유사도분석 기능
+* 김진홍 - 옷차림 인식 기능, 통신, DB
+* 유재상 - 사람 검출기능 ,체형 분석 기능
 
+* 공통 역할 - QT
+---------------------------
+## 기능리스트
+![Screenshot from 2024-03-20 17-14-09](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/7badd76e-ba0f-4121-858a-535aaf56471a)
+
+-------------------------------------
 
 1. 옷을 분석 할때 멀티라벨링으로 할지 단일라벨링으로 여러 모델을 해서 합칠지
 2. 학습 데이터를 필요 영역만 잘라서 해야하는지 전체이미지로 시켜야 하는지
