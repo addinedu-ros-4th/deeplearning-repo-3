@@ -1,6 +1,7 @@
 # deeplearning-repo-3
 딥러닝 프로젝트 3조. 이미지 분석을 통하여 사람의 특징을 추출하고 예측하는 딥러닝
-![Screenshot from 2024-03-20 09-43-59](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/f53fa97a-6edb-4225-8721-e2466cd7226c)
+![Screenshot from 2024-03-20 16-24-43](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/9b9021f6-61fa-42b8-b426-15b0e7d25e72)
+
 ![Screenshot from 2024-03-20 11-24-14](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/f485551d-81ec-481c-96ac-938844ed96dc)
 
 ![Screenshot from 2024-03-20 09-54-59](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/d4c7fa73-56da-41b3-a8eb-217d03534a1c)
