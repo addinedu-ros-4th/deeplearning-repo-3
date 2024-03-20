@@ -11,7 +11,7 @@
 
 ---------------------------
 ## 기능리스트
-![Screenshot from 2024-03-20 17-14-09](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/7badd76e-ba0f-4121-858a-535aaf56471a)
+![Screenshot from 2024-03-20 17-35-00](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/98201651/18343c83-5912-45d6-9d9b-4536b56a2011)
 
 -------------------------------------
 
