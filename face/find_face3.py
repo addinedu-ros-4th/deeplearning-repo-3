@@ -19,15 +19,7 @@ def detect_faces_and_info(frame, known_face_encodings, known_face_names, cascade
         match_percentage = (1 - face_distances[best_match_index]) * 100
         # print(face_distances)
 
-        if match_percentage >= 60:  # 일치 확률이 60% 이상인 경우
-            name = known_face_names[best_match_index]
-            text = f"{name} ({match_percentage:.2f}%)"
-            if match_percentage >= 80:
-                print(f"{match_percentage:.0f}% 일치!")
-            
-        else:
-            name = "Unknown"
-            text = name
+        
 
         # Gender 및 Age detection
         blob = cv2.dnn.blobFromImage(face, 1, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
@@ -38,6 +30,16 @@ def detect_faces_and_info(frame, known_face_encodings, known_face_names, cascade
         age_preds = age_net.forward()
         age = age_preds.argmax()
         age_gender_info = f"{gender_list[gender]}, {age_list[age]}"
+
+        if match_percentage >= 60:  # 일치 확률이 60% 이상인 경우
+            name = known_face_names[best_match_index]
+            text = f"{name} ({match_percentage:.2f}%)"
+            if match_percentage >= 80:
+                print(f"⚠️ {name} 와(과) {match_percentage:.0f}% 유사 [ {age_gender_info}대로 추정 ]")
+            
+        else:
+            name = "Unknown"
+            text = name
 
         # 사각형 그리기
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
@@ -79,8 +81,8 @@ age_net = cv2.dnn.readNetFromCaffe(
     'face/model/age_net.caffemodel')
 
 gender_net = cv2.dnn.readNetFromCaffe(
-    'face/model/deploy_gender.prototxt',
-    'face/model/gender_net.caffemodel')
+    'project_learning/face/model/deploy_gender.prototxt',
+    'project_learning/face/model/gender_net.caffemodel')
 
 age_list = ['(0 ~ 5)','(5 ~ 10)','(10 ~ 20)','(20 ~ 30)',
             '(30 ~ 50)','(50 ~ 70)','(70 ~ 100)','uknown']
@@ -107,7 +109,7 @@ while webcam.isOpened():
     frame = detect_faces_and_info(frame, known_face_encodings, known_face_names, cascade, age_net, gender_net, MODEL_MEAN_VALUES, age_list, gender_list)
 
     # 결과 출력
-    cv2.imshow("Detect Me", frame)
+    cv2.imshow("Detect face", frame)
 
     # 'q' 키를 누르면 종료
     if cv2.waitKey(1) & 0xFF == ord('q'):
