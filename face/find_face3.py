@@ -19,8 +19,6 @@ def detect_faces_and_info(frame, known_face_encodings, known_face_names, cascade
         match_percentage = (1 - face_distances[best_match_index]) * 100
         # print(face_distances)
 
-        
-
         # Gender 및 Age detection
         blob = cv2.dnn.blobFromImage(face, 1, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
         gender_net.setInput(blob)
