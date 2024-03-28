@@ -11,7 +11,8 @@ from PyQt5 import uic
 import struct
 import time
 import pickle
-
+from ultralytics import YOLO
+from perfect import UpperBodyExtractorThread
 from mediapipeBody import MideapipeBody
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
@@ -34,22 +35,26 @@ class MainWindow(QMainWindow, from_class):
         self.poseEstimateInst.start()
         self.poseEstimateInst.updatePose.connect(self.updatePixmap)
 
+        self.model = YOLO('yolov8n.pt')
+        self.upperBody = UpperBodyExtractorThread(self.model)
+        self.upperBody.frame_processed.connect(self.updatePixmap2)  # 상위 몸체 추출 결과를 GUI에 반영할 슬롯 연결
+        self.upperBody.start()
         # self.outFrame()
 
     def updateFrame(self):
         self.poseEstimateInst.cameraImage = self.udp_thread.frame
+        self.upperBody.cameraImage = np.copy(self.udp_thread.frame)
 
-        self.udp_thread.frame = cv2.cvtColor(self.udp_thread.frame, cv2.COLOR_BGR2RGB)
-        h, w, ch = self.udp_thread.frame.shape
-        bytes_per_line = ch * w
+
+    def updatePixmap2(self, cameraImage):
+        # 상위 몸체 추출 결과를 QLabel에 표시
+        rgb_image = cv2.cvtColor(cameraImage, cv2.COLOR_BGR2RGB)
         q_img = QImage(
-            self.udp_thread.frame.data, w, h, bytes_per_line, QImage.Format_RGB888
-        )
-        self.pixmap2 = self.pixmap2.fromImage(q_img)
-        self.pixmap2 = self.pixmap2.scaled(
-            self.labelPixmap2.width(), self.labelPixmap2.height()
-        )
-        self.labelPixmap2.setPixmap(self.pixmap2)
+            rgb_image.data, rgb_image.shape[1], rgb_image.shape[0], rgb_image.strides[0], QImage.Format_RGB888
+        )          
+        pixmap = QPixmap.fromImage(q_img)
+        self.labelPixmap2.setPixmap(pixmap)
+
 
     def updatePixmap(self):
         # self.labelPixmap.setPixmap(self.poseEstimateInst.processedImage)
