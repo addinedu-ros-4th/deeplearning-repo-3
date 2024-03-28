@@ -64,8 +64,8 @@ class MainWindow(QMainWindow, from_class):
             self.pixmap = self.pixmap.scaled(
                 self.labelPixmap.width(), self.labelPixmap.height()
             )
-            self.labelPixmap.setPixmap(self.pixmap)
-            self.labelHeight.setText(str(self.poseEstimateInst.MPBody.distSum))
+            self.labelPixmap3.setPixmap(self.pixmap)
+            self.labelVideoBody.setText(str(self.poseEstimateInst.MPBody.distSum))
 
         # processedImg = self.poseEstimateInst.processedImage
         # h, w, ch = processedImg

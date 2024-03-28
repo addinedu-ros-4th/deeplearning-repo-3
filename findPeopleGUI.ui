@@ -16,8 +16,8 @@
   <widget class="QLabel" name="labelPixmap">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>0</y>
+     <x>10</x>
+     <y>360</y>
      <width>320</width>
      <height>240</height>
     </rect>
@@ -35,8 +35,8 @@
   <widget class="QLabel" name="labelPixmap2">
    <property name="geometry">
     <rect>
-     <x>340</x>
-     <y>0</y>
+     <x>350</x>
+     <y>360</y>
      <width>320</width>
      <height>240</height>
     </rect>
@@ -54,8 +54,8 @@
   <widget class="QLabel" name="labelPixmap3">
    <property name="geometry">
     <rect>
-     <x>680</x>
-     <y>0</y>
+     <x>690</x>
+     <y>360</y>
      <width>320</width>
      <height>240</height>
     </rect>
@@ -73,47 +73,56 @@
   <widget class="QLabel" name="labelVideoFace">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>250</y>
+     <x>120</x>
+     <y>620</y>
      <width>57</width>
      <height>15</height>
     </rect>
    </property>
    <property name="text">
     <string>-</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="labelVideoClothes">
    <property name="geometry">
     <rect>
-     <x>470</x>
-     <y>250</y>
+     <x>480</x>
+     <y>610</y>
      <width>57</width>
      <height>15</height>
     </rect>
    </property>
    <property name="text">
     <string>-</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="labelVideoBody">
    <property name="geometry">
     <rect>
-     <x>820</x>
-     <y>250</y>
+     <x>830</x>
+     <y>610</y>
      <width>57</width>
-     <height>15</height>
+     <height>16</height>
     </rect>
    </property>
    <property name="text">
     <string>-</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>480</y>
+     <y>60</y>
      <width>661</width>
      <height>271</height>
     </rect>
@@ -312,14 +321,27 @@
   <widget class="QLabel" name="labelResult">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>330</y>
+     <x>30</x>
+     <y>660</y>
      <width>261</width>
      <height>51</height>
     </rect>
    </property>
    <property name="text">
     <string>TextLabel</string>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>690</x>
+     <y>60</y>
+     <width>321</width>
+     <height>271</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>GroupBox</string>
    </property>
   </widget>
  </widget>
