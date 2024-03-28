@@ -39,11 +39,16 @@ class CameraThread(QThread):
                     x1, y1, x2, y2 = map(int, box)
                     class_id = int(detection.boxes.cls[i].item())
                     class_label = model.names[class_id]
-
+                    confidence = float(detection.boxes.conf[i].item())  # 객체의 신뢰도(확률)
                     # Display only if the detected class is "person"
-                    if class_label == "person":
+                    if class_label == "person" and confidence >= 0.9:
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        cv2.putText(frame, class_label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        #cv2.putText(frame, class_label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        cv2.putText(frame, f'{class_label} {confidence:.2f}', (x1, y1 + 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        roi = frame[y1:y2, x1:x2]
+                        upper_body_region = (10, 65, 140, 190)  # (x1, y1, x2, y2) 형식의 좌표영역
+                        # 상체 영역 추출
+                        frame= roi[upper_body_region[1]:upper_body_region[3], upper_body_region[0]:upper_body_region[2]]
 
             # Emit the frame to update GUI
             self.change_pixmap_signal.emit(frame)
@@ -81,3 +86,4 @@ if __name__ == "__main__":
     myWindows = WindowClass()
     myWindows.show()
     sys.exit(app.exec_())
+
