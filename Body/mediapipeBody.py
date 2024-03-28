@@ -14,7 +14,7 @@ class MideapipeBody:
         super().__init__()
         print("start")
 
-        model_path = "./model/mediapipe/pose_landmarker_full.task"
+        model_path = "../model/mediapipe/pose_landmarker_full.task"
 
         self.ratio = 0.32
 
