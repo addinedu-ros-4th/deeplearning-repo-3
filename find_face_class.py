@@ -1,6 +1,6 @@
 import cv2
-import face_recognition
 import numpy as np
+import face_recognition
 
 class FaceDetector:
     def __init__(self, new_images, new_names):
@@ -10,11 +10,11 @@ class FaceDetector:
                         '(30 ~ 50)','(50 ~ 70)','(70 ~ 100)','uknown']
         self.gender_list = ['Male', 'Female']
         self.load_known_faces(new_images, new_names)
-        self.load_models(cascade_filename='project_learning/face/model/haarcascade_frontalface_alt.xml',
-                            age_net_prototxt='project_learning/face/model/deploy_age.prototxt',
-                            age_net_caffemodel='project_learning/face/model/age_net.caffemodel',
-                            gender_net_prototxt='project_learning/face/model/deploy_gender.prototxt',
-                            gender_net_caffemodel='project_learning/face/model/gender_net.caffemodel')
+        self.load_models(cascade_filename='face/model/haarcascade_frontalface_alt.xml',
+                            age_net_prototxt='face/model/deploy_age.prototxt',
+                            age_net_caffemodel='face/model/age_net.caffemodel',
+                            gender_net_prototxt='face/model/deploy_gender.prototxt',
+                            gender_net_caffemodel='face/model/gender_net.caffemodel')
 
     def load_known_faces(self, new_images, new_names):
         for image_path, name in zip(new_images, new_names):
@@ -66,36 +66,6 @@ class FaceDetector:
         age = age_preds.argmax()
         return f"{self.gender_list[gender]}, {self.age_list[age]}"
 
-    def run_webcam_detection(self):
-        webcam = cv2.VideoCapture(0)
-
-        if not webcam.isOpened():
-            print("Could not open webcam")
-            return
-
-        while webcam.isOpened():
-            status, frame = webcam.read()
-
-            if not status:
-                print("Could not read frame")
-                break
-
-            frame = self.detect_faces_and_info(frame)
-
-            cv2.imshow("Detect face", frame)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-        webcam.release()
-        cv2.destroyAllWindows()
-###################################################################
-#사용 예시
-# new_images = ["project_learning/face/src/earnest.png",
-#             "project_learning/face/src/jinhong.jpg",
-#             "project_learning/face/src/jaesang.jpg"]
-# new_names = ["younghwan", "jinhong", "jaesang"]
-
-# face_detector = FaceDetector(new_images=new_images,new_names=new_names)
-
-# face_detector.run_webcam_detection()
+    def run_detection_on_frame(self, frame):
+        processed_frame = self.detect_faces_and_info(frame)
+        return processed_frame
