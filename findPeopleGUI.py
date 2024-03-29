@@ -11,9 +11,13 @@ from PyQt5 import uic
 import struct
 import time
 import pickle
-from ultralytics import YOLO
-from perfect import UpperBodyExtractorThread
+
 from mediapipeBody import MideapipeBody
+
+import mediapipe as mp
+from mediapipe.tasks.python import vision
+
+from find_face_class import FaceDetector
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
 
@@ -26,6 +30,7 @@ class MainWindow(QMainWindow, from_class):
 
         self.pixmap = QPixmap(self.labelPixmap.width(), self.labelPixmap.height())
         self.pixmap2 = QPixmap(self.labelPixmap2.width(), self.labelPixmap2.height())
+        self.pixmap3 = QPixmap(self.labelPixmap3.width(), self.labelPixmap3.height())
 
         self.udp_thread = UdpReceiverThread()
         self.udp_thread.start()
@@ -33,54 +38,59 @@ class MainWindow(QMainWindow, from_class):
 
         self.poseEstimateInst = poseEstimateThread()
         self.poseEstimateInst.start()
-        self.poseEstimateInst.updatePose.connect(self.updatePixmap)
+        self.poseEstimateInst.updatePose.connect(self.updatePixmapPose)
 
-        self.model = YOLO('yolov8n.pt')
-        self.upperBody = UpperBodyExtractorThread(self.model)
-        self.upperBody.frame_processed.connect(self.updatePixmap2)  # 상위 몸체 추출 결과를 GUI에 반영할 슬롯 연결
-        self.upperBody.start()
-        # self.outFrame()
+        self.faceDetectInst = FaceThread()
+        self.faceDetectInst.start()
+        self.faceDetectInst.updateface.connect(self.updatePixmapFace)
 
     def updateFrame(self):
-        self.poseEstimateInst.cameraImage = self.udp_thread.frame
-        self.upperBody.cameraImage = np.copy(self.udp_thread.frame)
+        originFrame = np.copy(self.udp_thread.frame)
+        originFrame = cv2.cvtColor(originFrame, cv2.COLOR_BGR2RGB)
+        self.poseEstimateInst.cameraImage = np.copy(originFrame)
+        # self.poseEstimateInst.cameraImage = self.udp_thread.frame
+        self.frameF = np.copy(originFrame)
 
+        # origin frame
+        h1, w1, ch1 = originFrame.shape
+        bytes_per_line = ch1 * w1
+        q_img = QImage(originFrame.data, w1, h1, bytes_per_line, QImage.Format_RGB888)
+        self.pixmap2 = self.pixmap2.fromImage(q_img)
+        self.pixmap2 = self.pixmap2.scaled(
+            self.labelPixmap2.width(), self.labelPixmap2.height()
+        )
+        self.labelPixmap2.setPixmap(self.pixmap2)
 
-    def updatePixmap2(self, cameraImage):
-        # 상위 몸체 추출 결과를 QLabel에 표시
-        rgb_image = cv2.cvtColor(cameraImage, cv2.COLOR_BGR2RGB)
-        q_img = QImage(
-            rgb_image.data, rgb_image.shape[1], rgb_image.shape[0], rgb_image.strides[0], QImage.Format_RGB888
-        )          
-        pixmap = QPixmap.fromImage(q_img)
-        self.labelPixmap2.setPixmap(pixmap)
+    def updatePixmapFace(self):
+        frame = self.faceDetectInst.faceInst.run_detection_on_frame(self.frameF)
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = frame.shape
+        bytes_per_line = ch * w
+        qq_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+        self.pixmap = self.pixmap.fromImage(qq_img)
+        self.pixmap = self.pixmap.scaled(
+            self.labelPixmap.width(), self.labelPixmap.height()
+        )
+        self.labelPixmap.setPixmap(self.pixmap)
 
-
-    def updatePixmap(self):
+    def updatePixmapPose(self):
         # self.labelPixmap.setPixmap(self.poseEstimateInst.processedImage)
         if self.poseEstimateInst.MPBody.to_window is not None:
-            self.img = cv2.cvtColor(
-                self.poseEstimateInst.MPBody.to_window, cv2.COLOR_BGR2RGB
-            )
+            # self.img = cv2.cvtColor(
+            #     self.poseEstimateInst.MPBody.to_window, cv2.COLOR_BGR2RGB
+            # )
+
+            self.img = self.poseEstimateInst.MPBody.to_window
+
             h, w, ch = self.img.shape
             bytes_per_line = ch * w
             q_img = QImage(self.img.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            self.pixmap = self.pixmap.fromImage(q_img)
-            self.pixmap = self.pixmap.scaled(
-                self.labelPixmap.width(), self.labelPixmap.height()
+            self.pixmap3 = self.pixmap3.fromImage(q_img)
+            self.pixmap3 = self.pixmap3.scaled(
+                self.labelPixmap3.width(), self.labelPixmap3.height()
             )
-            self.labelPixmap3.setPixmap(self.pixmap)
+            self.labelPixmap3.setPixmap(self.pixmap3)
             self.labelVideoBody.setText(str(self.poseEstimateInst.MPBody.distSum))
-
-        # processedImg = self.poseEstimateInst.processedImage
-        # h, w, ch = processedImg
-        # bytes_per_line = ch * w
-        # q_img = QImage(processedImg.data, w, h, bytes_per_line, QImage.Format_RGB888)
-        # self.pixmap = self.pixmap.fromImage(q_img)
-        # self.pixmap = self.pixmap.scaled(
-        #     self.labelPixmap.width(), self.labelPixmap.height()
-        # )
-        # self.labelPixmap.setPixmap(self.pixmap)
 
     def closeEvent(self, event):
         self.udp_thread.stop()
@@ -149,39 +159,53 @@ class poseEstimateThread(QThread):
         self.cameraImage = None
         self.processedImage = None
 
-        self.pixmapProcess = QPixmap()
+        self.i = 0
+
+    def run(self):
+        with vision.PoseLandmarker.create_from_options(
+            self.MPBody.options
+        ) as landmarker:
+
+            while True:
+                self.i += 1
+                print("poseThread : ", self.i)
+                if self.cameraImage is not None:
+                    # Convert the frame received from OpenCV to a MediaPipe’s Image object.
+                    mp_image = mp.Image(
+                        image_format=mp.ImageFormat.SRGB,
+                        # data=cv2.cvtColor(self.cameraImage, cv2.COLOR_BGR2RGB),
+                        data=self.cameraImage,
+                    )
+                    timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 10)
+                    # print("time :", timestamp_ms)
+                    landmarker.detect_async(mp_image, timestamp_ms)
+
+                    self.updatePose.emit()
+                time.sleep(0.1)
+
+
+class FaceThread(QThread):
+    updateface = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.new_images = [
+            "./face/src/earnest.png",
+            "./face/src/jinhong.jpg",
+            "./face/src/jaesang.jpg",
+        ]
+        self.new_names = ["younghwan", "jinhong", "jaesang"]
+        self.faceInst = FaceDetector(
+            new_images=self.new_images, new_names=self.new_names
+        )
         self.i = 0
 
     def run(self):
         while True:
             self.i += 1
-            print("poseThread : ", self.i)
-            if self.cameraImage is not None:
-                # 여기에서 이미지 처리 작업 수행
-                self.processedImage = self.processImageInternal(self.cameraImage)
-                # 처리된 이미지를 시그널을 통해 발신
-                # self.updatePose.emit(self.processedImage)
-                self.updatePose.emit()
-            # self.msleep(100)
-            time.sleep(0.05)
-
-    def processImageInternal(self, image):
-        # 여기에 이미지 처리 코드를 넣으세요
-        self.MPBody.EstimateHeight(image)
-
-        # if self.MPBody.to_window is not None:
-        #     # cv2.imshow("ddd", self.MPBody.to_window)
-
-        #     # print(type(self.MPBody.to_window))  # numpy.ndarray
-        #     self.img = cv2.cvtColor(self.MPBody.to_window, cv2.COLOR_BGR2RGB)
-
-        #     # h, w, c = self.img.shape
-        #     # qimage = QImage(self.img.data, w, h, w * c, QImage.Format_RGB888)
-        #     # self.pixmapProcess = self.pixmapProcess.fromImage(qimage)
-
-        #     # resultPixmap = self.pixmapProcess.scaled(320, 240)
-
-        # return resultPixmap
+            print("faceThread : ", self.i)
+            self.updateface.emit()
+            time.sleep(0.1)
 
 
 if __name__ == "__main__":
