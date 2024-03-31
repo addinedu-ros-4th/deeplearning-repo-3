@@ -12,12 +12,12 @@ import struct
 import time
 import pickle
 
-from mediapipeBody import MideapipeBody
+from pose.mediapipePose import MideapipeBody
 
 import mediapipe as mp
 from mediapipe.tasks.python import vision
 
-from find_face_class import FaceDetector
+from face.find_face_class import FaceDetector
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
 
@@ -28,14 +28,16 @@ class MainWindow(QMainWindow, from_class):
         self.setupUi(self)
         self.setWindowTitle("Find People")
 
-        self.pixmap = QPixmap(self.labelPixmap.width(), self.labelPixmap.height())
-        self.pixmap2 = QPixmap(self.labelPixmap2.width(), self.labelPixmap2.height())
-        self.pixmap3 = QPixmap(self.labelPixmap3.width(), self.labelPixmap3.height())
+        self.pixmapFace = QPixmap(self.labelPixmapFace.width(), self.labelPixmapFace.height())
+        self.pixmapFashion = QPixmap(self.labelPixmapFashion.width(), self.labelPixmapFashion.height())
+        self.pixmapPose = QPixmap(self.labelPixmapPose.width(), self.labelPixmapPose.height())
 
-        self.udp_thread = UdpReceiverThread()
-        self.udp_thread.start()
-        self.udp_thread.frame_received.connect(self.updateFrame)
+        # origin frame
+        self.tcpThread = tcpReceiverThread()
+        self.tcpThread.start()
+        self.tcpThread.frame_received.connect(self.updateFrame)
 
+        # Image processing frame to pixmap
         self.poseEstimateInst = poseEstimateThread()
         self.poseEstimateInst.start()
         self.poseEstimateInst.updatePose.connect(self.updatePixmapPose)
@@ -44,22 +46,23 @@ class MainWindow(QMainWindow, from_class):
         self.faceDetectInst.start()
         self.faceDetectInst.updateface.connect(self.updatePixmapFace)
 
+
     def updateFrame(self):
-        originFrame = np.copy(self.udp_thread.frame)
+        originFrame = np.copy(self.tcpThread.frame)
         originFrame = cv2.cvtColor(originFrame, cv2.COLOR_BGR2RGB)
         self.poseEstimateInst.cameraImage = np.copy(originFrame)
-        # self.poseEstimateInst.cameraImage = self.udp_thread.frame
+        # self.poseEstimateInst.cameraImage = self.tcpThread.frame
         self.frameF = np.copy(originFrame)
 
         # origin frame
         h1, w1, ch1 = originFrame.shape
         bytes_per_line = ch1 * w1
         q_img = QImage(originFrame.data, w1, h1, bytes_per_line, QImage.Format_RGB888)
-        self.pixmap2 = self.pixmap2.fromImage(q_img)
-        self.pixmap2 = self.pixmap2.scaled(
-            self.labelPixmap2.width(), self.labelPixmap2.height()
+        self.pixmapFashion = self.pixmapFashion.fromImage(q_img)
+        self.pixmapFashion = self.pixmapFashion.scaled(
+            self.labelPixmapFashion.width(), self.labelPixmapFashion.height()
         )
-        self.labelPixmap2.setPixmap(self.pixmap2)
+        self.labelPixmapFashion.setPixmap(self.pixmapFashion)
 
     def updatePixmapFace(self):
         frame = self.faceDetectInst.faceInst.run_detection_on_frame(self.frameF)
@@ -67,14 +70,14 @@ class MainWindow(QMainWindow, from_class):
         h, w, ch = frame.shape
         bytes_per_line = ch * w
         qq_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
-        self.pixmap = self.pixmap.fromImage(qq_img)
-        self.pixmap = self.pixmap.scaled(
-            self.labelPixmap.width(), self.labelPixmap.height()
+        self.pixmapFace = self.pixmapFace.fromImage(qq_img)
+        self.pixmapFace = self.pixmapFace.scaled(
+            self.labelPixmapFace.width(), self.labelPixmapFace.height()
         )
-        self.labelPixmap.setPixmap(self.pixmap)
+        self.labelPixmapFace.setPixmap(self.pixmapFace)
 
     def updatePixmapPose(self):
-        # self.labelPixmap.setPixmap(self.poseEstimateInst.processedImage)
+        # self.labelPixmapPose.setPixmap(self.poseEstimateInst.processedImage)
         if self.poseEstimateInst.MPBody.to_window is not None:
             # self.img = cv2.cvtColor(
             #     self.poseEstimateInst.MPBody.to_window, cv2.COLOR_BGR2RGB
@@ -85,19 +88,22 @@ class MainWindow(QMainWindow, from_class):
             h, w, ch = self.img.shape
             bytes_per_line = ch * w
             q_img = QImage(self.img.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            self.pixmap3 = self.pixmap3.fromImage(q_img)
-            self.pixmap3 = self.pixmap3.scaled(
-                self.labelPixmap3.width(), self.labelPixmap3.height()
+            self.pixmapPose = self.pixmapPose.fromImage(q_img)
+            self.pixmapPose = self.pixmapPose.scaled(
+                self.labelPixmapPose.width(), self.labelPixmapPose.height()
             )
-            self.labelPixmap3.setPixmap(self.pixmap3)
+            self.labelPixmapPose.setPixmap(self.pixmapPose)
             self.labelVideoBody.setText(str(self.poseEstimateInst.MPBody.distSum))
+    
+    def updatePixmapFashion(self):
+        pass
 
     def closeEvent(self, event):
-        self.udp_thread.stop()
+        self.tcpThread.stop()
         event.accept()
 
 
-class UdpReceiverThread(QThread):
+class tcpReceiverThread(QThread):
     frame_received = pyqtSignal()
 
     def __init__(self):
@@ -115,13 +121,14 @@ class UdpReceiverThread(QThread):
     def run(self):
         while True:
             self.i += 1
-            print("udp : ", self.i)
+            print("tcp : ", self.i)
             # 데이터 크기 수신
             while len(self.data) < self.payload_size:
                 packet = self.client_socket.recv(4 * 1024)
                 if not packet:
                     break
                 self.data += packet
+
             packed_msg_size = self.data[: self.payload_size]
             self.data = self.data[self.payload_size :]
             msg_size = struct.unpack("L", packed_msg_size)[0]
@@ -129,6 +136,7 @@ class UdpReceiverThread(QThread):
             # 데이터 수신
             while len(self.data) < msg_size:
                 self.data += self.client_socket.recv(4 * 1024)
+
             frame_data = self.data[:msg_size]
             self.data = self.data[msg_size:]
 
@@ -139,9 +147,6 @@ class UdpReceiverThread(QThread):
             # print(frame.shape)
 
             self.frame_received.emit()
-
-            # 이미지 레이블에 표시
-            # self.labelPixmap.setPixmap(self.pixmap)
 
             time.sleep(0.05)
 

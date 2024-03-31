@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <widget class="QLabel" name="labelPixmap">
+  <widget class="QLabel" name="labelPixmapFace">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -32,7 +32,7 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QLabel" name="labelPixmap2">
+  <widget class="QLabel" name="labelPixmapFashion">
    <property name="geometry">
     <rect>
      <x>350</x>
@@ -51,7 +51,7 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QLabel" name="labelPixmap3">
+  <widget class="QLabel" name="labelPixmapPose">
    <property name="geometry">
     <rect>
      <x>690</x>
