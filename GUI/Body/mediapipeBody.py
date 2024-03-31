@@ -14,7 +14,7 @@ class MideapipeBody:
         super().__init__()
         print("start")
 
-        model_path = "../model/mediapipe/pose_landmarker_full.task"
+        model_path = "pose_landmarker_full.task"
 
         self.ratio = 0.32
 
@@ -131,9 +131,9 @@ class MideapipeBody:
                 self.loc_29z,
             )
 
-            self.distSum = (
-                dist7to11 + dist11to23 + dist23to25 + dist25to29
-            ) * self.ratio + 15
+            self.distSum = int(
+                (dist7to11 + dist11to23 + dist23to25 + dist25to29) * self.ratio + 15
+            )
 
             if idx == 0:
                 mp.solutions.drawing_utils.draw_landmarks(
@@ -179,18 +179,7 @@ class MideapipeBody:
         if timestamp_ms < self.last_timestamp_ms:
             return
         self.last_timestamp_ms = timestamp_ms
-        # print("pose landmarker result: {}".format(detection_result))
-        self.to_window = cv2.cvtColor(
-            self.draw_landmarks_on_image(output_image.numpy_view(), detection_result),
-            cv2.COLOR_RGB2BGR,
-        )
 
-    def EstimateHeight(self, img):
-        with vision.PoseLandmarker.create_from_options(self.options) as landmarker:
-            # Convert the frame received from OpenCV to a MediaPipe’s Image object.
-            mp_image = mp.Image(
-                image_format=mp.ImageFormat.SRGB,
-                data=cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
-            )
-            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
-            landmarker.detect_async(mp_image, timestamp_ms)
+        self.to_window = self.draw_landmarks_on_image(
+            output_image.numpy_view(), detection_result
+        )
