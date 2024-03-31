@@ -111,8 +111,7 @@ class tcpReceiverThread(QThread):
         self.i = 0
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(
-            # ("192.168.0.12", 9020)
-            ("192.168.35.73", 9020)
+            ("192.168.0.12", 9020)
         )  # 서버 IP 주소와 포트 번호 설정
 
         self.data = b""
