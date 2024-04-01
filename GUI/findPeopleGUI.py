@@ -19,6 +19,8 @@ from mediapipe.tasks.python import vision
 
 from face.find_face_class import FaceDetector
 
+from pose.ArUcoMarker import ArUco
+
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
 
 
@@ -42,9 +44,9 @@ class MainWindow(QMainWindow, from_class):
         self.poseEstimateInst.start()
         self.poseEstimateInst.updatePose.connect(self.updatePixmapPose)
 
-        self.faceDetectInst = FaceThread()
-        self.faceDetectInst.start()
-        self.faceDetectInst.updateface.connect(self.updatePixmapFace)
+        # self.faceDetectInst = FaceThread()
+        # self.faceDetectInst.start()
+        # self.faceDetectInst.updateface.connect(self.updatePixmapFace)
 
 
     def updateFrame(self):
@@ -55,14 +57,14 @@ class MainWindow(QMainWindow, from_class):
         self.frameF = np.copy(originFrame)
 
         # origin frame
-        h1, w1, ch1 = originFrame.shape
-        bytes_per_line = ch1 * w1
-        q_img = QImage(originFrame.data, w1, h1, bytes_per_line, QImage.Format_RGB888)
-        self.pixmapFashion = self.pixmapFashion.fromImage(q_img)
-        self.pixmapFashion = self.pixmapFashion.scaled(
-            self.labelPixmapFashion.width(), self.labelPixmapFashion.height()
-        )
-        self.labelPixmapFashion.setPixmap(self.pixmapFashion)
+        # h1, w1, ch1 = originFrame.shape
+        # bytes_per_line = ch1 * w1
+        # q_img = QImage(originFrame.data, w1, h1, bytes_per_line, QImage.Format_RGB888)
+        # self.pixmapFashion = self.pixmapFashion.fromImage(q_img)
+        # self.pixmapFashion = self.pixmapFashion.scaled(
+        #     self.labelPixmapFashion.width(), self.labelPixmapFashion.height()
+        # )
+        # self.labelPixmapFashion.setPixmap(self.pixmapFashion)
 
     def updatePixmapFace(self):
         frame = self.faceDetectInst.faceInst.run_detection_on_frame(self.frameF)
@@ -93,7 +95,14 @@ class MainWindow(QMainWindow, from_class):
                 self.labelPixmapPose.width(), self.labelPixmapPose.height()
             )
             self.labelPixmapPose.setPixmap(self.pixmapPose)
-            self.labelVideoBody.setText(str(self.poseEstimateInst.MPBody.distSum))
+
+            personHeight = self.poseEstimateInst.MPBody.personHeight
+            self.labelVideoBody.setText(str(personHeight))
+            # if personHeight is not None:
+            #     self.labelVideoBody.setText(str(personHeight))
+            # else:
+            #     print("no people")
+            #     self.labelVideoBody.setText("0")
     
     def updatePixmapFashion(self):
         pass
@@ -112,6 +121,7 @@ class tcpReceiverThread(QThread):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(
             ("192.168.0.12", 9020)
+            # ("192.168.35.137", 9020)
         )  # 서버 IP 주소와 포트 번호 설정
 
         self.data = b""
@@ -120,7 +130,7 @@ class tcpReceiverThread(QThread):
     def run(self):
         while True:
             self.i += 1
-            print("tcp : ", self.i)
+            # print("tcp : ", self.i)
             # 데이터 크기 수신
             while len(self.data) < self.payload_size:
                 packet = self.client_socket.recv(4 * 1024)
@@ -173,7 +183,7 @@ class poseEstimateThread(QThread):
 
             while True:
                 self.i += 1
-                print("poseThread : ", self.i)
+                # print("poseThread : ", self.i)
                 if self.cameraImage is not None:
                     # Convert the frame received from OpenCV to a MediaPipe’s Image object.
                     mp_image = mp.Image(
