@@ -27,8 +27,39 @@ combined_frame_height = 960
 combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
 
 model = YOLO('yolov8n.pt')
-upperBody = UpperBodyExtractorThread(model)
-upperBody.start()
+
+def extract_average_color(image):
+    # Calculate average color
+    average_color = np.mean(image, axis=(0, 1))
+    return average_color
+
+def describe_rgb(rgb):
+    red = rgb[2]
+    green = rgb[1]
+    blue = rgb[0]
+    print(int(red),'',int(green),'',int(blue))
+    # 색상(RGB) 값을 색상 이름으로 변환
+    if red < 100 and green < 100 and blue < 100:
+        color_name = '검은색(Black)'
+    elif red > 150 and green > 150 and blue > 150:
+        color_name = '흰색(White)'
+    elif red > green and red > blue:
+        if red - green < 15 :
+            color_name = '노란색(yellow)'
+        else:
+            color_name = '빨간색(Red)'
+    elif green > red and green > blue:
+        color_name = '초록색(Green)'
+    elif blue > red and blue > green:
+        if blue - red < 15:
+            color_name = '보라색(purple)'
+        else:
+            color_name = '파란색(Blue)'
+    else:
+        color_name = '다른 색상(Other)'
+    # 설명 출력
+    # print(f"이 RGB 값은 \"{color_name}\"입니다.")
+    return color_name
 
 def extract_upper_body(frame, model):
     results = model(frame, stream=True)
@@ -49,6 +80,9 @@ def extract_upper_body(frame, model):
 
                 # Extract upper body region
                 upper_body_roi = roi[upper_body_region[1]:upper_body_region[3], upper_body_region[0]:upper_body_region[2]]
+                average_color = extract_average_color(upper_body_roi)
+                color = describe_rgb(average_color)
+                cv2.putText(frame, color, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)  # 색상 이름 출력
                 ##upper_body_roi 영역으로 opencv 색 검출 로직 추가 하면됨
 
     return frame
@@ -102,6 +136,7 @@ def main():
                 while len(data) < payload_size:
                     packet = client_socket.recv(4 * 1024)
                     if not packet:
+                        print(data)
                         break
                     data += packet
 
@@ -118,7 +153,6 @@ def main():
 
                 frame_data = data[:msg_size]
                 data = data[msg_size:]
-
                 # 수신된 데이터 디코딩하여 화면에 표시
                 frame = pickle.loads(frame_data)
                 frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)

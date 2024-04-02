@@ -28,6 +28,7 @@ def send_video():
                 client_socket.sendall(size)
 
                 # 데이터 전송
+                print(data)
                 client_socket.sendall(data)
                 time.sleep(0.05)
 
