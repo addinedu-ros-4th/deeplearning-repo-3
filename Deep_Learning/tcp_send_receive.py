@@ -63,7 +63,7 @@ def describe_rgb(rgb):
 
 def extract_upper_body(frame, model):
     results = model(frame, stream=True)
-
+    
     for detection in results:
         for i, box in enumerate(detection.boxes.xyxy):
             x1, y1, x2, y2 = map(int, box)
@@ -187,12 +187,6 @@ def main():
                 else:
                     pose_frame = frame2
                     # cv2.imshow('Pose Landmarks', frame2)
-
-
-
-
-
-
                 # body_frame = gg.detect_pose(frame)
                 hand_frame = extract_upper_body(frame,model)
                 face_frame = ff.detect_faces_and_info(frame1)
@@ -228,12 +222,19 @@ def recive_GUI(server_socket):
                 break
             
             # 이벤트 처리
-            print("Received event from GUI:", event_data)
+            name, color, height, age, gender = event_data.split(',')
+            print("Name:", name)
+            print("Color:", color)
+            print("Height:", height)
+            print("Age:", age)
+            print("Gender:", gender)
             print('*'*100)
         except Exception as e:
+            print("Error occurred during GUI communication:", str(e))
             break
         finally:
             client_socket.close()
+
 
 if __name__ == '__main__':
     main()

@@ -109,7 +109,7 @@ class MainWindow(QMainWindow, from_class):
         # 연결 종료
         cursor.close()
         self.select_person()
-        self.send_event_person_add("hi")
+        self.send_event_person_add(name, height, birth, topcolor,gender)
 
 
     def select_person(self):
@@ -143,12 +143,18 @@ class MainWindow(QMainWindow, from_class):
             for log in logs:
                 print(log)
     
-    def send_event_person_add(self, event_data):
-    # 소켓 생성 및 서버에 연결
+    def send_event_person_add(self, name, height, birth,gender, topcolor):
+        # 소켓 생성 및 서버에 연결
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.connect(('192.168.0.40', 9022))
+            
+            # 데이터 포맷 구성 (예: 이름, 키, 생년월일, 상의 색상, 이미지 바이너리)
+            event_data = f"{name},{gender},{height},{birth},{topcolor}"
+            
             # 이벤트 데이터 전송
             client_socket.sendall(event_data.encode())
+
+
 
 
 
