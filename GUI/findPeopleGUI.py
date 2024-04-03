@@ -33,27 +33,30 @@ class TcpServerThread(QThread):
     def run(self):
         data = b""
         payload_size = struct.calcsize("L")
-        while True:
-            while len(data) < payload_size:
-                packet = self.client_socket.recv(4 * 1024)
+        try:
+            while True:
+                while len(data) < payload_size:
+                    packet = self.client_socket.recv(4 * 1024)
+                    if not packet:
+                        break
+                    data += packet
                 if not packet:
                     break
-                data += packet
-            if not packet:
-                break
-            packed_msg_size = data[:payload_size]
-            msg_size = struct.unpack("L", packed_msg_size)[0]
-            while len(data) < msg_size + payload_size:
-                packet = self.client_socket.recv(4 * 1024)
-                if not packet:
-                    break
-                data += packet
-            frame_data = data[payload_size:msg_size + payload_size]
-            data = data[msg_size + payload_size:]
-            frame = pickle.loads(frame_data)
-            frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
-            frame = cv2.resize(frame, (1200, 300))
-            self.frame_received.emit(frame)
+                packed_msg_size = data[:payload_size]
+                msg_size = struct.unpack("L", packed_msg_size)[0]
+                while len(data) < msg_size + payload_size:
+                    packet = self.client_socket.recv(4 * 1024)
+                    if not packet:
+                        break
+                    data += packet
+                frame_data = data[payload_size:msg_size + payload_size]
+                data = data[msg_size + payload_size:]
+                frame = pickle.loads(frame_data)
+                frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+                frame = cv2.resize(frame, (1200, 300))
+                self.frame_received.emit(frame)
+        finally:
+            self.client_socket.close()
 
 class MainWindow(QMainWindow, from_class):
     def __init__(self):
