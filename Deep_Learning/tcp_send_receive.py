@@ -11,6 +11,7 @@ import socket
 import struct
 import pickle
 import sys
+import threading
 
 new_images = ["src/earnest.png",
             "src/jinhong.jpg",
@@ -107,11 +108,11 @@ def main():
     ArUconst = ArUco()
     k = 0.9 # 0.73
 
-    # HOST = "192.168.0.40"
-    HOST = "192.168.0.9"
+    HOST = "192.168.0.40"
+    #HOST = "192.168.0.9"
     PORT1 = 9020  # 원본 프레임 수신용 포트
     PORT2 = 9021  # 처리 결과 전송용 포트
-    
+    PORT3 = 9022  # GUI 양방향 통신
 
     # 서버 소켓 생성 및 원본 프레임 수신용 포트에 바인딩
     server_socket_1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -124,15 +125,14 @@ def main():
     server_socket_2.bind((HOST, PORT2))
     server_socket_2.listen(5)
 
-# 이후에 각 소켓에 대한 accept 및 데이터 처리 로직을 추가해야 합니다.
-    # while 
-    # print("waiting Cam connection")
-    # client_socket, addr = server_socket_1.accept()
-    # print(f"연결 수락됨 from {addr}")
-    # print("waiting GUI connection")
-    # client_socket2, addr2 = server_socket_2.accept()
-    # print(f"연결 수락됨 from {addr2}")
-   
+    # GUI
+    server_socket_3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket_3.bind((HOST, PORT3))
+    server_socket_3.listen(1)
+
+    gui_thread = threading.Thread(target=recive_GUI, args=(server_socket_3,))
+    gui_thread.start()
+
     while True:
         print("waiting Cam connection")
         client_socket, addr = server_socket_1.accept()
@@ -141,8 +141,6 @@ def main():
         client_socket2, addr2 = server_socket_2.accept()
         print(f"연결 수락됨 from {addr2}")
         # 클라이언트로부터 프레임 수신 및 전송
-
-        print("nope")
         try:
             data = b""  # 수신된 데이터 저장을 위한 변수
             payload_size = struct.calcsize("L")
@@ -218,6 +216,24 @@ def main():
             server_socket_2.close()
             cv2.destroyAllWindows()
             break
+
+def recive_GUI(server_socket):
+    while True:
+        try:
+            client_socket, addr = server_socket.accept()
+            print(f"GUI 연결 수락됨 from {addr}")
+            # 클라이언트로부터 이벤트 수신
+            event_data = client_socket.recv(1024).decode()
+            if not event_data:
+                break
+            
+            # 이벤트 처리
+            print("Received event from GUI:", event_data)
+            print('*'*100)
+        except Exception as e:
+            break
+        finally:
+            client_socket.close()
 
 if __name__ == '__main__':
     main()
