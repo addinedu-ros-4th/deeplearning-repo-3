@@ -1,17 +1,16 @@
-
 import cv2
 import mediapipe as mp
 import numpy as np
-from cvzone.HandTrackingModule import HandDetector
 from time import sleep
 from ultralytics import YOLO
-from perfect import UpperBodyExtractorThread
-# from mediapipeBody import MideapipeBody
-from mediapipe_ern import PoseDetector
+# from perfect import UpperBodyExtractorThread
+from mediapipePose import mediapipePose
+from ArUcoMarker import ArUco
 from new_class import FaceDetector
 import socket
 import struct
 import pickle
+import sys
 
 new_images = ["src/earnest.png",
             "src/jinhong.jpg",
@@ -87,7 +86,7 @@ def extract_upper_body(frame, model):
 
     return frame
 # gg = MideapipeBody()
-gg = PoseDetector()
+# gg = PoseDetector()
 ff = FaceDetector(new_images,new_names)
 
 def send_frame(conn, frame):
@@ -104,14 +103,21 @@ def send_frame(conn, frame):
 
 # 소켓 생성 및 서버에 연결
 def main():
-    HOST = "192.168.0.40"
+    poseInst = mediapipePose()
+    ArUconst = ArUco()
+    k = 0.9 # 0.73
+
+    # HOST = "192.168.0.40"
+    HOST = "192.168.0.9"
     PORT1 = 9020  # 원본 프레임 수신용 포트
     PORT2 = 9021  # 처리 결과 전송용 포트
+    
 
     # 서버 소켓 생성 및 원본 프레임 수신용 포트에 바인딩
     server_socket_1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket_1.bind((HOST, PORT1))
     server_socket_1.listen(5)
+    
 
     # 서버 소켓 생성 및 처리 결과 전송용 포트에 바인딩
     server_socket_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -119,14 +125,24 @@ def main():
     server_socket_2.listen(5)
 
 # 이후에 각 소켓에 대한 accept 및 데이터 처리 로직을 추가해야 합니다.
-
-
+    # while 
+    # print("waiting Cam connection")
+    # client_socket, addr = server_socket_1.accept()
+    # print(f"연결 수락됨 from {addr}")
+    # print("waiting GUI connection")
+    # client_socket2, addr2 = server_socket_2.accept()
+    # print(f"연결 수락됨 from {addr2}")
+   
     while True:
+        print("waiting Cam connection")
         client_socket, addr = server_socket_1.accept()
         print(f"연결 수락됨 from {addr}")
+        print("waiting GUI connection")
         client_socket2, addr2 = server_socket_2.accept()
         print(f"연결 수락됨 from {addr2}")
         # 클라이언트로부터 프레임 수신 및 전송
+
+        print("nope")
         try:
             data = b""  # 수신된 데이터 저장을 위한 변수
             payload_size = struct.calcsize("L")
@@ -159,18 +175,50 @@ def main():
                 frame = cv2.resize(frame, (640, 480))  # 프레임 크기 조정
                 
                 frame1 = np.copy(frame)
-                body_frame = gg.detect_pose(frame)
+                frame2 = np.copy(frame)
+
+
+                result2 = ArUconst.measureZcoordinate(frame2)
+                if (ArUconst.coordinateZ2 != 0):
+                    # cv2.imshow('Pose Landmarks', result2)
+                    pose_frame = poseInst.measureHeight(frame2)
+                    if (poseInst.pixelSum != 0):
+                        height = (poseInst.pixelSum * ArUconst.coordinateZ2 * k) + 15
+                        cv2.putText(pose_frame, f'height: {height:.2f}cm', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 150, 0), 5)
+                        # cv2.imshow('Pose Landmarks', pose_frame)
+                else:
+                    pose_frame = frame2
+                    # cv2.imshow('Pose Landmarks', frame2)
+
+
+
+
+
+
+                # body_frame = gg.detect_pose(frame)
                 hand_frame = extract_upper_body(frame,model)
                 face_frame = ff.detect_faces_and_info(frame1)
-                combined_frame = np.hstack((face_frame, body_frame, hand_frame))
+                combined_frame = np.hstack((face_frame, pose_frame, hand_frame))
+                # combined_frame = np.hstack((face_frame, frame2, hand_frame))
                 
-                send_frame(client_socket2, combined_frame)
+                if client_socket2:
+                    send_frame(client_socket2, combined_frame)
+                else:
+                    pass
                 #cv2.imshow("Received Frame", combined_frame)
                 #cv2.waitKey(1)  # 프레임이 정상적으로 표시되기 위해 잠시 대기
-        finally:
+        except KeyboardInterrupt:
             # 클라이언트 소켓 및 OpenCV 창 종료
-            client_socket.close()
+            server_socket_1.close()
+            server_socket_2.close()
             cv2.destroyAllWindows()
+            break
+        finally:
+            server_socket_1.close()
+            server_socket_2.close()
+            cv2.destroyAllWindows()
+            break
 
 if __name__ == '__main__':
     main()
+    sys.exit(0)
