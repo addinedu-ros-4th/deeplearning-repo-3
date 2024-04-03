@@ -17,7 +17,7 @@ class TcpServerThread(QThread):
     def __init__(self):
         super().__init__()
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect(("192.168.0.32", 9021))
+        self.client_socket.connect(("192.168.0.40", 9021))
 
     def run(self):
         data = b""

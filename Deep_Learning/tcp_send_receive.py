@@ -40,23 +40,23 @@ def describe_rgb(rgb):
     print(int(red),'',int(green),'',int(blue))
     # 색상(RGB) 값을 색상 이름으로 변환
     if red < 100 and green < 100 and blue < 100:
-        color_name = '검은색(Black)'
+        color_name = '(Black)'
     elif red > 150 and green > 150 and blue > 150:
-        color_name = '흰색(White)'
+        color_name = '(White)'
     elif red > green and red > blue:
         if red - green < 15 :
-            color_name = '노란색(yellow)'
+            color_name = '(yellow)'
         else:
-            color_name = '빨간색(Red)'
+            color_name = '(Red)'
     elif green > red and green > blue:
-        color_name = '초록색(Green)'
+        color_name = '(Green)'
     elif blue > red and blue > green:
         if blue - red < 15:
-            color_name = '보라색(purple)'
+            color_name = '(purple)'
         else:
-            color_name = '파란색(Blue)'
+            color_name = '(Blue)'
     else:
-        color_name = '다른 색상(Other)'
+        color_name = '(Other)'
     # 설명 출력
     # print(f"이 RGB 값은 \"{color_name}\"입니다.")
     return color_name
@@ -72,7 +72,7 @@ def extract_upper_body(frame, model):
             confidence = float(detection.boxes.conf[i].item())  # 객체의 신뢰도(확률)
 
             # Display only if the detected class is "person" and confidence is >= 0.9
-            if class_label == "person" and confidence >= 0.9:
+            if class_label == "person" and confidence >= 0.85:
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, f'{class_label} {confidence:.2f}', (x1, y1 + 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 roi = frame[y1:y2, x1:x2]
@@ -104,7 +104,7 @@ def send_frame(conn, frame):
 
 # 소켓 생성 및 서버에 연결
 def main():
-    HOST = "192.168.0.32"
+    HOST = "192.168.0.40"
     PORT1 = 9020  # 원본 프레임 수신용 포트
     PORT2 = 9021  # 처리 결과 전송용 포트
 

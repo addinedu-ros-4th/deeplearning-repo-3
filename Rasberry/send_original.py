@@ -13,7 +13,7 @@ def send_video():
         try:
             # 소켓 생성 및 연결
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect(("192.168.0.32", 9020))  # 서버 IP 주소와 포트 
+            client_socket.connect(("192.168.0.40", 9020))  # 서버 IP 주소와 포트 
             while True:
                 ret, frame = cap.read()  # 프레임 캡처
                 if not ret:
