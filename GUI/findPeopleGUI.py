@@ -8,20 +8,21 @@ import socket
 import struct
 import pickle
 import sys
-import mysql.connector
+# import mysql.connector
 from datetime import datetime
 
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
-HOST = "192.168.0.32"
+HOST = "192.168.0.9"
+
 # MySQL 서버에 대한 연결 설정
-connection = mysql.connector.connect(
-                host="192.168.0.40",
-                user="YJS",
-                password="1234",
-                database="findperson"
-            )  
-person_data = []
+# connection = mysql.connector.connect(
+#                 host="192.168.0.40",
+#                 user="YJS",
+#                 password="1234",
+#                 database="findperson"
+#             )  
+# person_data = []
 class TcpServerThread(QThread):
     frame_received = pyqtSignal(np.ndarray)
 
@@ -29,8 +30,6 @@ class TcpServerThread(QThread):
         super().__init__()
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((HOST, 9021))
-        
-
 
     def run(self):
         data = b""
@@ -85,8 +84,8 @@ class MainWindow(QMainWindow, from_class):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("Find People")
-        self.select_person()
-        self.select_log()
+        # self.select_person()
+        # self.select_log()
 
         self.tcpThread = TcpServerThread()
         self.tcpThread.start()
@@ -100,7 +99,7 @@ class MainWindow(QMainWindow, from_class):
         self.recording = False  # 녹화 중인지 여부를 나타내는 플래그
         self.video_writer = None  # VideoWriter 객체
         
-        self.PersonADD.clicked.connect(self.insert_person)
+        # self.PersonADD.clicked.connect(self.insert_person)
         self.pictureUpload.clicked.connect(self.fileopen)
         
     def updateResult(self,color):
@@ -122,7 +121,7 @@ class MainWindow(QMainWindow, from_class):
                 self.recvidio = True
                 print("녹화시작")
                 self.start_recording()  # 녹화 시작
-            self.insert_log('의심', data[0])
+            # self.insert_log('의심', data[0])
         else:
             if self.recvidio:
                 print("녹화종료")
@@ -159,83 +158,83 @@ class MainWindow(QMainWindow, from_class):
         filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File') 
         self.picture = filename
 
-    def insert_person(self):
-    # PyQt5에서 입력 폼의 데이터 가져오기
-        name = self.Name.text()
-        height = self.Height.text()
-        birth = self.Birth.text()
-        topcolor = self.TopColor.currentText()
-        picture_path = self.picture
-        self.picture = None
-        # 성별 라디오 버튼의 상태 가져오기
-        gender = "M" if self.MAN.isChecked() else "F"
+    # def insert_person(self):
+    # # PyQt5에서 입력 폼의 데이터 가져오기
+    #     name = self.Name.text()
+    #     height = self.Height.text()
+    #     birth = self.Birth.text()
+    #     topcolor = self.TopColor.currentText()
+    #     picture_path = self.picture
+    #     self.picture = None
+    #     # 성별 라디오 버튼의 상태 가져오기
+    #     gender = "M" if self.MAN.isChecked() else "F"
 
-        # 이미지 파일을 바이너리로 읽기
-        with open(picture_path[0], 'rb') as f:
-            picture_binary = f.read()
+    #     # 이미지 파일을 바이너리로 읽기
+    #     with open(picture_path[0], 'rb') as f:
+    #         picture_binary = f.read()
 
-        # 데이터베이스에 데이터 삽입하기
-        cursor = connection.cursor()
-        query = "INSERT INTO PERSON (NAME, GENDER, HEIGHT, AGE, CLOTH, PICTURE) VALUES (%s, %s, %s, %s, %s, %s)"
-        values = (name, gender, height, birth, topcolor, picture_binary)
-        cursor.execute(query, values)
-        connection.commit()
-        # 연결 종료
-        cursor.close()
-        self.select_person()
+    #     # 데이터베이스에 데이터 삽입하기
+    #     cursor = connection.cursor()
+    #     query = "INSERT INTO PERSON (NAME, GENDER, HEIGHT, AGE, CLOTH, PICTURE) VALUES (%s, %s, %s, %s, %s, %s)"
+    #     values = (name, gender, height, birth, topcolor, picture_binary)
+    #     cursor.execute(query, values)
+    #     connection.commit()
+    #     # 연결 종료
+    #     cursor.close()
+    #     self.select_person()
         
 
 
-    def select_person(self):
-    # 데이터베이스에서 데이터 가져오기
-        cursor = connection.cursor()
-        query = "SELECT NAME, GENDER, HEIGHT, CLOTH, AGE FROM PERSON"
-        cursor.execute(query)
-        data = cursor.fetchall()    
+    # def select_person(self):
+    # # 데이터베이스에서 데이터 가져오기
+    #     cursor = connection.cursor()
+    #     query = "SELECT NAME, GENDER, HEIGHT, CLOTH, AGE FROM PERSON"
+    #     cursor.execute(query)
+    #     data = cursor.fetchall()    
 
-        global person_data
-        person_data = data
-        # 테이블 위젯 초기화
-        self.tableWidgetDB.setRowCount(len(data))
-        self.tableWidgetDB.setColumnCount(5)
-        headers = ['Name', 'Gender', 'Height', 'TopColor', 'AGE']
-        self.tableWidgetDB.setHorizontalHeaderLabels(headers)
+    #     global person_data
+    #     person_data = data
+    #     # 테이블 위젯 초기화
+    #     self.tableWidgetDB.setRowCount(len(data))
+    #     self.tableWidgetDB.setColumnCount(5)
+    #     headers = ['Name', 'Gender', 'Height', 'TopColor', 'AGE']
+    #     self.tableWidgetDB.setHorizontalHeaderLabels(headers)
 
-        # 데이터 채우기
-        for row_num, row_data in enumerate(data):
-            for col_num, cell_data in enumerate(row_data):
-                self.tableWidgetDB.setItem(row_num, col_num, QTableWidgetItem(str(cell_data)))
+    #     # 데이터 채우기
+    #     for row_num, row_data in enumerate(data):
+    #         for col_num, cell_data in enumerate(row_data):
+    #             self.tableWidgetDB.setItem(row_num, col_num, QTableWidgetItem(str(cell_data)))
 
-        # 연결 종료
-        cursor.close()
+    #     # 연결 종료
+    #     cursor.close()
 
-    def select_log(self):
-            # 데이터베이스에서 모든 레코드 가져오기
-            cur = connection.cursor()
-            cur.execute("SELECT * FROM LOG")
-            logs = cur.fetchall()
-            log_text = ""
+    # def select_log(self):
+    #         # 데이터베이스에서 모든 레코드 가져오기
+    #         cur = connection.cursor()
+    #         cur.execute("SELECT * FROM LOG")
+    #         logs = cur.fetchall()
+    #         log_text = ""
 
-            for log in logs:
-                log_text += " ".join(map(str, log)) + "\n"  # 각 로그를 문자열로 변환하여 log_text에 추가
+    #         for log in logs:
+    #             log_text += " ".join(map(str, log)) + "\n"  # 각 로그를 문자열로 변환하여 log_text에 추가
             
-            self.LogEdit.setText(log_text)  # LogEdit에 로그 텍스트 설정
+    #         self.LogEdit.setText(log_text)  # LogEdit에 로그 텍스트 설정
 
 
     
     
-    def insert_log(self,acc,name):
-        current_time = datetime.now()
-        formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+    # def insert_log(self,acc,name):
+    #     current_time = datetime.now()
+    #     formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
 
-        cursor = connection.cursor()
-        query = "INSERT INTO LOG (FINDTIME,ACCURACY,NAME) VALUES (%s, %s,%s)"
-        values = (formatted_time, acc,name)
-        cursor.execute(query, values)
-        connection.commit()
-        # 연결 종료
-        cursor.close()
-        self.select_log()
+    #     cursor = connection.cursor()
+    #     query = "INSERT INTO LOG (FINDTIME,ACCURACY,NAME) VALUES (%s, %s,%s)"
+    #     values = (formatted_time, acc,name)
+    #     cursor.execute(query, values)
+    #     connection.commit()
+    #     # 연결 종료
+    #     cursor.close()
+    #     self.select_log()
         
 
 if __name__ == "__main__":
