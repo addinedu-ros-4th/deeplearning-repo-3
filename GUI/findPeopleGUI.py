@@ -9,9 +9,11 @@ import struct
 import pickle
 import sys
 import mysql.connector
+from datetime import datetime
+
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
-
+HOST = "192.168.0.40"
 # MySQL 서버에 대한 연결 설정
 connection = mysql.connector.connect(
                 host="192.168.0.40",
@@ -19,14 +21,14 @@ connection = mysql.connector.connect(
                 password="1234",
                 database="findperson"
             )  
-
+person_data = []
 class TcpServerThread(QThread):
     frame_received = pyqtSignal(np.ndarray)
 
     def __init__(self):
         super().__init__()
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect(("192.168.0.40", 9021))
+        self.client_socket.connect((HOST, 9021))
         
 
 
@@ -64,7 +66,7 @@ class TcpServerThread2(QThread):
     def __init__(self):
         super().__init__()
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect(("192.168.0.40", 9022))
+        self.client_socket.connect((HOST, 9022))
 
     def run(self):
         try:
@@ -77,19 +79,16 @@ class TcpServerThread2(QThread):
             self.client_socket.close()
 
 
-
-
-
 class MainWindow(QMainWindow, from_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("Find People")
         self.select_person()
+        self.select_log()
         self.tcpThread = TcpServerThread()
         self.tcpThread.start()
         self.tcpThread.frame_received.connect(self.updateFrame)
-
         self.tcpThread2 = TcpServerThread2()
         self.tcpThread2.start()
         self.tcpThread2.result_received.connect(self.updateResult)
@@ -100,7 +99,21 @@ class MainWindow(QMainWindow, from_class):
         self.pictureUpload.clicked.connect(self.fileopen)
         
     def updateResult(self,color):
+        global person_data
+        count = 0
         self.resultColor.setText(color)
+
+        for data in person_data:
+            if color in data[3]:
+                print("Color found in global data:", color)
+                count = count+1
+                break
+        else:
+            print("Color not found in global data:", color)
+
+        
+        if count == 1:
+            self.insert_log('의심',data[0])
         
 
     def updateFrame(self, frame):
@@ -148,8 +161,10 @@ class MainWindow(QMainWindow, from_class):
         cursor = connection.cursor()
         query = "SELECT NAME, GENDER, HEIGHT, CLOTH, AGE FROM PERSON"
         cursor.execute(query)
-        data = cursor.fetchall()
+        data = cursor.fetchall()    
 
+        global person_data
+        person_data = data
         # 테이블 위젯 초기화
         self.tableWidgetDB.setRowCount(len(data))
         self.tableWidgetDB.setColumnCount(5)
@@ -169,10 +184,13 @@ class MainWindow(QMainWindow, from_class):
             cur = connection.cursor()
             cur.execute("SELECT * FROM LOG")
             logs = cur.fetchall()
+            log_text = ""
 
-            #로그를 표 형식으로 포맷
             for log in logs:
-                print(log)
+                log_text += " ".join(map(str, log)) + "\n"  # 각 로그를 문자열로 변환하여 log_text에 추가
+            
+            self.LogEdit.setText(log_text)  # LogEdit에 로그 텍스트 설정
+
 
     def send_event_person_add(self,picture_binary):
     # 소켓 생성 및 서버에 연결
@@ -181,7 +199,19 @@ class MainWindow(QMainWindow, from_class):
             # 이미지 데이터 전송
             client_socket.sendall(picture_binary)
     
+    def insert_log(self,acc,name):
+        current_time = datetime.now()
+        formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
 
+        cursor = connection.cursor()
+        query = "INSERT INTO LOG (FINDTIME,ACCURACY,NAME) VALUES (%s, %s,%s)"
+        values = (formatted_time, acc,name)
+        cursor.execute(query, values)
+        connection.commit()
+        # 연결 종료
+        cursor.close()
+        self.select_log()
+       
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

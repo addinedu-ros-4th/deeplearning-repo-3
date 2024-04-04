@@ -47,23 +47,23 @@ def describe_rgb(rgb):
     print(int(red),'',int(green),'',int(blue))
     # 색상(RGB) 값을 색상 이름으로 변환
     if red < 100 and green < 100 and blue < 100:
-        color_name = '(Black)'
+        color_name = 'Black'
     elif red > 150 and green > 150 and blue > 150:
-        color_name = '(White)'
+        color_name = 'White'
     elif red > green and red > blue:
         if red - green < 15 :
-            color_name = '(yellow)'
+            color_name = 'yellow'
         else:
-            color_name = '(Red)'
+            color_name = 'Red'
     elif green > red and green > blue:
-        color_name = '(Green)'
+        color_name = 'Green'
     elif blue > red and blue > green:
         if blue - red < 15:
-            color_name = '(purple)'
+            color_name = 'purple'
         else:
-            color_name = '(Blue)'
+            color_name = 'Blue'
     else:
-        color_name = '(Other)'
+        color_name = 'Other'
     # 설명 출력
     # print(f"이 RGB 값은 \"{color_name}\"입니다.")
     return color_name
