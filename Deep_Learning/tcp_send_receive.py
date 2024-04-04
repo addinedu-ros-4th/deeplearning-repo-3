@@ -26,6 +26,13 @@ combined_frame_width = 1280
 combined_frame_height = 960
 combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
 
+HOST = "192.168.0.40"
+#HOST = "192.168.0.9"
+PORT1 = 9020  # 원본 프레임 수신용 포트
+PORT2 = 9021  # 처리 결과 전송용 포트
+PORT3 = 9022  # GUI RESULT 
+PORT4 = 9023  # GUI 실종자등록
+
 model = YOLO('yolov8n.pt')
 
 def extract_average_color(image):
@@ -63,7 +70,7 @@ def describe_rgb(rgb):
 
 def extract_upper_body(frame, model):
     results = model(frame, stream=True)
-    
+    result_color = 'other'
     for detection in results:
         for i, box in enumerate(detection.boxes.xyxy):
             x1, y1, x2, y2 = map(int, box)
@@ -84,8 +91,9 @@ def extract_upper_body(frame, model):
                 color = describe_rgb(average_color)
                 cv2.putText(frame, color, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)  # 색상 이름 출력
                 ##upper_body_roi 영역으로 opencv 색 검출 로직 추가 하면됨
+                result_color = color
 
-    return frame
+    return frame,result_color
 # gg = MideapipeBody()
 # gg = PoseDetector()
 ff = FaceDetector(new_images,new_names)
@@ -102,18 +110,11 @@ def send_frame(conn, frame):
     # 데이터 전송
     conn.sendall(data)
 
-# 소켓 생성 및 서버에 연결
-def main():
-    poseInst = mediapipePose()
-    ArUconst = ArUco()
-    k = 0.9 # 0.73
+def send_result(conn, result):
+    # 결과를 인코딩하여 전송
+    conn.sendall(result.encode())
 
-    HOST = "192.168.0.40"
-    #HOST = "192.168.0.9"
-    PORT1 = 9020  # 원본 프레임 수신용 포트
-    PORT2 = 9021  # 처리 결과 전송용 포트
-    PORT3 = 9022  # GUI 양방향 통신
-
+def socket_init():
     # 서버 소켓 생성 및 원본 프레임 수신용 포트에 바인딩
     server_socket_1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket_1.bind((HOST, PORT1))
@@ -125,13 +126,29 @@ def main():
     server_socket_2.bind((HOST, PORT2))
     server_socket_2.listen(5)
 
-    # GUI
+    # GUI 모델 결과 및 실종자 추가 등록
     server_socket_3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket_3.bind((HOST, PORT3))
     server_socket_3.listen(1)
 
-    gui_thread = threading.Thread(target=recive_GUI, args=(server_socket_3,))
+
+    server_socket_4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket_4.bind((HOST, PORT4))
+    server_socket_4.listen(1)
+
+    gui_thread = threading.Thread(target=recive_GUI, args=(server_socket_4,))
     gui_thread.start()
+
+    return server_socket_1,server_socket_2,server_socket_3
+    
+
+# 소켓 생성 및 서버에 연결
+def main():
+    poseInst = mediapipePose()
+    ArUconst = ArUco()
+    k = 0.9 # 0.73
+
+    server_socket_1,server_socket_2,server_socket_3=socket_init()
 
     while True:
         print("waiting Cam connection")
@@ -140,6 +157,10 @@ def main():
         print("waiting GUI connection")
         client_socket2, addr2 = server_socket_2.accept()
         print(f"연결 수락됨 from {addr2}")
+        print("waiting GUI connection2")
+        client_socket3, addr3 = server_socket_3.accept()
+        print(f"연결 수락됨 from {addr3}")
+        
         # 클라이언트로부터 프레임 수신 및 전송
         try:
             data = b""  # 수신된 데이터 저장을 위한 변수
@@ -188,13 +209,13 @@ def main():
                     pose_frame = frame2
                     # cv2.imshow('Pose Landmarks', frame2)
                 # body_frame = gg.detect_pose(frame)
-                hand_frame = extract_upper_body(frame,model)
+                hand_frame,color = extract_upper_body(frame,model)
                 face_frame = ff.detect_faces_and_info(frame1)
                 combined_frame = np.hstack((face_frame, pose_frame, hand_frame))
                 # combined_frame = np.hstack((face_frame, frame2, hand_frame))
-                
-                if client_socket2:
+                if client_socket2 and client_socket3:
                     send_frame(client_socket2, combined_frame)
+                    send_result(client_socket3,color)
                 else:
                     pass
                 #cv2.imshow("Received Frame", combined_frame)
@@ -217,17 +238,13 @@ def recive_GUI(server_socket):
             client_socket, addr = server_socket.accept()
             print(f"GUI 연결 수락됨 from {addr}")
             # 클라이언트로부터 이벤트 수신
-            event_data = client_socket.recv(1024).decode()
+            event_data = client_socket.recv(4096)
             if not event_data:
                 break
             
             # 이벤트 처리
-            name, color, height, age, gender = event_data.split(',')
-            print("Name:", name)
-            print("Color:", color)
-            print("Height:", height)
-            print("Age:", age)
-            print("Gender:", gender)
+            print('*'*100)
+            print(event_data)
             print('*'*100)
         except Exception as e:
             print("Error occurred during GUI communication:", str(e))

@@ -58,18 +58,49 @@ class TcpServerThread(QThread):
         finally:
             self.client_socket.close()
 
+class TcpServerThread2(QThread):
+    result_received = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect(("192.168.0.40", 9022))
+
+    def run(self):
+        try:
+            while True:
+                color_data = self.client_socket.recv(1024)
+                color = color_data.decode()
+                self.result_received.emit(color)
+
+        finally:
+            self.client_socket.close()
+
+
+
+
+
 class MainWindow(QMainWindow, from_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("Find People")
         self.select_person()
-        self.tcpThread2 = TcpServerThread()
+        self.tcpThread = TcpServerThread()
+        self.tcpThread.start()
+        self.tcpThread.frame_received.connect(self.updateFrame)
+
+        self.tcpThread2 = TcpServerThread2()
         self.tcpThread2.start()
-        self.tcpThread2.frame_received.connect(self.updateFrame)
+        self.tcpThread2.result_received.connect(self.updateResult)
+        
         self.picture=None
+        
         self.PersonADD.clicked.connect(self.insert_person)
         self.pictureUpload.clicked.connect(self.fileopen)
+        
+    def updateResult(self,color):
+        self.resultColor.setText(color)
         
 
     def updateFrame(self, frame):
@@ -109,7 +140,7 @@ class MainWindow(QMainWindow, from_class):
         # 연결 종료
         cursor.close()
         self.select_person()
-        self.send_event_person_add(name, height, birth, topcolor,gender)
+        self.send_event_person_add(picture_binary)
 
 
     def select_person(self):
@@ -142,20 +173,14 @@ class MainWindow(QMainWindow, from_class):
             #로그를 표 형식으로 포맷
             for log in logs:
                 print(log)
-    
-    def send_event_person_add(self, name, height, birth,gender, topcolor):
-        # 소켓 생성 및 서버에 연결
+
+    def send_event_person_add(self,picture_binary):
+    # 소켓 생성 및 서버에 연결
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-            client_socket.connect(('192.168.0.40', 9022))
-            
-            # 데이터 포맷 구성 (예: 이름, 키, 생년월일, 상의 색상, 이미지 바이너리)
-            event_data = f"{name},{gender},{height},{birth},{topcolor}"
-            
-            # 이벤트 데이터 전송
-            client_socket.sendall(event_data.encode())
-
-
-
+            client_socket.connect(('192.168.0.40', 9023))
+            # 이미지 데이터 전송
+            client_socket.sendall(picture_binary)
+    
 
 
 if __name__ == "__main__":

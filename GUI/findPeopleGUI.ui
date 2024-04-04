@@ -372,6 +372,19 @@
     <string>GroupBox</string>
    </property>
   </widget>
+  <widget class="QLabel" name="resultColor">
+   <property name="geometry">
+    <rect>
+     <x>510</x>
+     <y>670</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>TextLabel</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
