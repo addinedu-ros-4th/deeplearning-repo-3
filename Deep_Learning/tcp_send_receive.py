@@ -237,20 +237,42 @@ def recive_GUI(server_socket):
         try:
             client_socket, addr = server_socket.accept()
             print(f"GUI 연결 수락됨 from {addr}")
-            # 클라이언트로부터 이벤트 수신
-            event_data = client_socket.recv(4096)
-            if not event_data:
+            
+            # 이름의 길이 수신
+            name_length_data = client_socket.recv(4)  # 데이터 길이를 4바이트로 가정
+            if not name_length_data:
+                break
+            name_length = int.from_bytes(name_length_data, byteorder='big')
+
+            # 이름 데이터 수신
+            name_data = client_socket.recv(name_length)
+            if not name_data:
+                break
+            name = name_data.decode('utf-8')
+
+            # 이미지의 길이 수신
+            picture_length_data = client_socket.recv(4)  # 데이터 길이를 4바이트로 가정
+            if not picture_length_data:
+                break
+            picture_length = int.from_bytes(picture_length_data, byteorder='big')
+
+            # 이미지 데이터 수신
+            picture_binary = client_socket.recv(picture_length)
+            if not picture_binary:
                 break
             
             # 이벤트 처리
             print('*'*100)
-            print(event_data)
+            print("Name:", name)
+            print("Picture Length:", picture_length)
+            # 여기서 picture_binary를 이미지로 디코딩하는 작업이 필요
             print('*'*100)
         except Exception as e:
             print("Error occurred during GUI communication:", str(e))
             break
         finally:
             client_socket.close()
+
 
 
 if __name__ == '__main__':

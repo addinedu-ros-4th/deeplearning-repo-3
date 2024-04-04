@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, pyqtSignal, Qt,QTimer
 from PyQt5.QtWidgets import QMainWindow, QApplication,QTableWidgetItem
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5 import uic,QtWidgets
@@ -79,6 +79,7 @@ class TcpServerThread2(QThread):
             self.client_socket.close()
 
 
+
 class MainWindow(QMainWindow, from_class):
     def __init__(self):
         super().__init__()
@@ -86,14 +87,16 @@ class MainWindow(QMainWindow, from_class):
         self.setWindowTitle("Find People")
         self.select_person()
         self.select_log()
+
         self.tcpThread = TcpServerThread()
         self.tcpThread.start()
         self.tcpThread.frame_received.connect(self.updateFrame)
+
         self.tcpThread2 = TcpServerThread2()
         self.tcpThread2.start()
         self.tcpThread2.result_received.connect(self.updateResult)
-        
-        self.picture=None
+
+        self.recvidio = False
         
         self.PersonADD.clicked.connect(self.insert_person)
         self.pictureUpload.clicked.connect(self.fileopen)
@@ -113,7 +116,17 @@ class MainWindow(QMainWindow, from_class):
 
         
         if count == 1:
-            self.insert_log('의심',data[0])
+                if not self.recvidio:
+                    self.recvidio = True
+                    print("녹화시작")
+                self.insert_log('의심',data[0])
+        else:
+            if self.recvidio:
+                print("녹화종료")
+            self.recvidio = False
+
+
+
         
 
     def updateFrame(self, frame):
@@ -153,7 +166,7 @@ class MainWindow(QMainWindow, from_class):
         # 연결 종료
         cursor.close()
         self.select_person()
-        self.send_event_person_add(picture_binary)
+        self.send_event_person_add(picture_binary,name)
 
 
     def select_person(self):
@@ -192,12 +205,25 @@ class MainWindow(QMainWindow, from_class):
             self.LogEdit.setText(log_text)  # LogEdit에 로그 텍스트 설정
 
 
-    def send_event_person_add(self,picture_binary):
+    def send_event_person_add(self,picture_binary,name):
     # 소켓 생성 및 서버에 연결
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.connect(('192.168.0.40', 9023))
+            # 이름의 길이 전송
+            name_bytes = name.encode('utf-8')
+            name_length = len(name_bytes)
+            client_socket.sendall(name_length.to_bytes(4, byteorder='big'))  # 이름 데이터 길이를 4바이트로 전송
+
+            # 이름 데이터 전송
+            client_socket.sendall(name_bytes)
+            
+            # 이미지 데이터의 길이 전송
+            picture_length = len(picture_binary)
+            client_socket.sendall(picture_length.to_bytes(4, byteorder='big'))  # 데이터 길이를 4바이트로 전송
+
             # 이미지 데이터 전송
             client_socket.sendall(picture_binary)
+
     
     def insert_log(self,acc,name):
         current_time = datetime.now()
