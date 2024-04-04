@@ -97,6 +97,8 @@ class MainWindow(QMainWindow, from_class):
         self.tcpThread2.result_received.connect(self.updateResult)
 
         self.recvidio = False
+        self.recording = False  # 녹화 중인지 여부를 나타내는 플래그
+        self.video_writer = None  # VideoWriter 객체
         
         self.PersonADD.clicked.connect(self.insert_person)
         self.pictureUpload.clicked.connect(self.fileopen)
@@ -116,21 +118,36 @@ class MainWindow(QMainWindow, from_class):
 
         
         if count == 1:
-                if not self.recvidio:
-                    self.recvidio = True
-                    print("녹화시작")
-                self.insert_log('의심',data[0])
+            if not self.recvidio:
+                self.recvidio = True
+                print("녹화시작")
+                self.start_recording()  # 녹화 시작
+            self.insert_log('의심', data[0])
         else:
             if self.recvidio:
                 print("녹화종료")
+                self.stop_recording()  # 녹화 종료
             self.recvidio = False
 
+    def start_recording(self):
+        if not self.recording:
+            self.recording = True
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 코덱 설정
+            self.video_writer = cv2.VideoWriter('RightNow.avi', fourcc, 20.0, (1200, 300))  # VideoWriter 객체 생성
 
+    def stop_recording(self):
+        if self.recording:
+            self.recording = False
+            self.video_writer.release()  # VideoWriter 객체 닫기
 
         
 
     def updateFrame(self, frame):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        if self.recording:
+            self.video_writer.write(frame_rgb)  # 녹화 중이면 프레임을 동영상에 추가
+
         h, w, ch = frame_rgb.shape
         bytes_per_line = ch * w
         qq_img = QImage(frame_rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)

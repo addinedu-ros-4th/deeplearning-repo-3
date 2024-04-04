@@ -64,7 +64,7 @@ combined_frame_width = 1280
 combined_frame_height = 960
 combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
 
-HOST = "192.168.0.32"
+HOST = "192.168.0.40"
 #HOST = "192.168.0.9"
 PORT1 = 9020  # 원본 프레임 수신용 포트
 PORT2 = 9021  # 처리 결과 전송용 포트
