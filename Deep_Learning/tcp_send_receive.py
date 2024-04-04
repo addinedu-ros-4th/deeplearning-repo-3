@@ -11,7 +11,6 @@ import socket
 import struct
 import pickle
 import sys
-import threading
 import mysql.connector
 import io
 from PIL import Image
@@ -54,8 +53,6 @@ for i, image_data in enumerate(data):
 print(new_images)
 print("이미지 저장이 완료되었습니다.")
 
-
-
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
@@ -64,14 +61,15 @@ combined_frame_width = 1280
 combined_frame_height = 960
 combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
 
-HOST = "192.168.0.40"
+HOST = "192.168.0.32"
 #HOST = "192.168.0.9"
 PORT1 = 9020  # 원본 프레임 수신용 포트
 PORT2 = 9021  # 처리 결과 전송용 포트
 PORT3 = 9022  # GUI RESULT 
-PORT4 = 9023  # GUI 실종자등록
+
 
 model = YOLO('yolov8n.pt')
+ff = FaceDetector(new_images,new_names)
 
 def extract_average_color(image):
     # Calculate average color
@@ -82,7 +80,7 @@ def describe_rgb(rgb):
     red = rgb[2]
     green = rgb[1]
     blue = rgb[0]
-    print(int(red),'',int(green),'',int(blue))
+    # print(int(red),'',int(green),'',int(blue))
     # 색상(RGB) 값을 색상 이름으로 변환
     if red < 100 and green < 100 and blue < 100:
         color_name = 'Black'
@@ -107,7 +105,7 @@ def describe_rgb(rgb):
     return color_name
 
 def extract_upper_body(frame, model):
-    results = model(frame, stream=True)
+    results = model(frame, stream=True,verbose=False)
     result_color = 'other'
     for detection in results:
         for i, box in enumerate(detection.boxes.xyxy):
@@ -132,9 +130,6 @@ def extract_upper_body(frame, model):
                 result_color = color
 
     return frame,result_color
-# gg = MideapipeBody()
-# gg = PoseDetector()
-ff = FaceDetector(new_images,new_names)
 
 def send_frame(conn, frame):
     # JPEG로 인코딩
@@ -170,13 +165,7 @@ def socket_init():
     server_socket_3.listen(1)
 
 
-    server_socket_4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket_4.bind((HOST, PORT4))
-    server_socket_4.listen(1)
-
-    gui_thread = threading.Thread(target=recive_GUI, args=(server_socket_4,))
-    gui_thread.start()
-
+    
     return server_socket_1,server_socket_2,server_socket_3
     
 
@@ -269,48 +258,6 @@ def main():
             server_socket_2.close()
             cv2.destroyAllWindows()
             break
-
-def recive_GUI(server_socket):
-    while True:
-        try:
-            client_socket, addr = server_socket.accept()
-            print(f"GUI 연결 수락됨 from {addr}")
-            
-            # 이름의 길이 수신
-            name_length_data = client_socket.recv(4)  # 데이터 길이를 4바이트로 가정
-            if not name_length_data:
-                break
-            name_length = int.from_bytes(name_length_data, byteorder='big')
-
-            # 이름 데이터 수신
-            name_data = client_socket.recv(name_length)
-            if not name_data:
-                break
-            name = name_data.decode('utf-8')
-
-            # 이미지의 길이 수신
-            picture_length_data = client_socket.recv(4)  # 데이터 길이를 4바이트로 가정
-            if not picture_length_data:
-                break
-            picture_length = int.from_bytes(picture_length_data, byteorder='big')
-
-            # 이미지 데이터 수신
-            picture_binary = client_socket.recv(picture_length)
-            if not picture_binary:
-                break
-            
-            # 이벤트 처리
-            print('*'*100)
-            print("Name:", name)
-            print("Picture Length:", picture_length)
-            # 여기서 picture_binary를 이미지로 디코딩하는 작업이 필요
-            print('*'*100)
-        except Exception as e:
-            print("Error occurred during GUI communication:", str(e))
-            break
-        finally:
-            client_socket.close()
-
 
 
 if __name__ == '__main__':

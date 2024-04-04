@@ -13,7 +13,7 @@ from datetime import datetime
 
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
-HOST = "192.168.0.40"
+HOST = "192.168.0.32"
 # MySQL 서버에 대한 연결 설정
 connection = mysql.connector.connect(
                 host="192.168.0.40",
@@ -183,7 +183,7 @@ class MainWindow(QMainWindow, from_class):
         # 연결 종료
         cursor.close()
         self.select_person()
-        self.send_event_person_add(picture_binary,name)
+        
 
 
     def select_person(self):
@@ -222,25 +222,7 @@ class MainWindow(QMainWindow, from_class):
             self.LogEdit.setText(log_text)  # LogEdit에 로그 텍스트 설정
 
 
-    def send_event_person_add(self,picture_binary,name):
-    # 소켓 생성 및 서버에 연결
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-            client_socket.connect(('192.168.0.40', 9023))
-            # 이름의 길이 전송
-            name_bytes = name.encode('utf-8')
-            name_length = len(name_bytes)
-            client_socket.sendall(name_length.to_bytes(4, byteorder='big'))  # 이름 데이터 길이를 4바이트로 전송
-
-            # 이름 데이터 전송
-            client_socket.sendall(name_bytes)
-            
-            # 이미지 데이터의 길이 전송
-            picture_length = len(picture_binary)
-            client_socket.sendall(picture_length.to_bytes(4, byteorder='big'))  # 데이터 길이를 4바이트로 전송
-
-            # 이미지 데이터 전송
-            client_socket.sendall(picture_binary)
-
+    
     
     def insert_log(self,acc,name):
         current_time = datetime.now()
@@ -254,7 +236,7 @@ class MainWindow(QMainWindow, from_class):
         # 연결 종료
         cursor.close()
         self.select_log()
-       
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
