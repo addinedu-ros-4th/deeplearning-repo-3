@@ -224,7 +224,7 @@ def main():
                 frame1 = np.copy(frame)
                 frame2 = np.copy(frame)
 
-                height = 0
+                height = 'None'
                 result2 = ArUconst.measureZcoordinate(frame2)
                 if (ArUconst.coordinateZ2 != 0):
                     # cv2.imshow('Pose Landmarks', result2)

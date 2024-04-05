@@ -10,7 +10,7 @@ import pickle
 import sys
 import mysql.connector
 from datetime import datetime
-
+import re
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
 HOST = "192.168.0.40"
@@ -72,9 +72,9 @@ class TcpServerThread2(QThread):
     def run(self):
         try:
             while True:
-                color_data = self.client_socket.recv(1024)
-                color = color_data.decode()
-                self.result_received.emit(color)
+                resultdata = self.client_socket.recv(1024)
+                result = resultdata.decode()
+                self.result_received.emit(result)
 
         finally:
             self.client_socket.close()
@@ -139,58 +139,73 @@ class MainWindow(QMainWindow, from_class):
         else:
             QMessageBox.warning(self, "Error", "해당 ID에 대한 동영상이 없습니다.")
 
-    def updateResult(self,color):
+    def updateResult(self,result):
         global person_data
         global prev_count
-        count = 0
-        self.resultColor.setText(color)
         name = None
+        count = 0
+        self.resultColor.setText(result)
+        parsed_result = result.split(',')
+        if len(parsed_result) >= 5:
+            # 각 요소를 순서대로 변수에 할당
+            rcolor = parsed_result[0]
+            rheight = parsed_result[1]
+            rname = parsed_result[2]
+            rage = parsed_result[4]
+            parse_age = rage.split(' ')
+            min_range = int(parse_age[2])
+            max_range = int(parse_age[4])
+
         for data in person_data:
-            if color in data[3]:
+            if rname in data[0]:
+                count = 4
                 name = data[0]
-                count = count+1
                 break
+            elif rheight in data[2]:
+                count += 1  # count를 1씩 증가시킴
+            elif rcolor in data[3]:
+                name = data[0]
+                count += 1  # count를 1씩 증가시킴
+            elif min_range <= int(data[4]) <= max_range:
+                name = data[0]
+                count += 1  # count를 1씩 증가시킴
 
-        # target ='샘플'
-
-        # if target != '언노운':
-        #     if self.recvidio:
-        #         self.stop_recording()  # 이전 녹화 중지
-        #         self.recvidio = False
-        #     prev_count = 4
-        #     self.insert_log('확정',data[0])
-        #     print("녹화시작")
-        #     self.start_recording(name)
-
-        if count == 2:
+        if count == 4:
+            if self.recvidio:
+                self.stop_recording()  # 이전 녹화 중지
+                self.recvidio = False
+            self.insert_log('확정', name)  # name 변수 사용
+            print("COUNT 4 녹화시작")
+            self.start_recording(name,'확정'),
+        elif count == 2:
             if not self.recvidio:
                 self.recvidio = True
                 prev_count = 2
-                self.insert_log('의심', data[0])
-                print("녹화시작")
-                self.start_recording(name) # 녹화 시작
+                self.insert_log('의심', name)  # name 변수 사용
+                print("COUNT 2 녹화시작")
+                self.start_recording(name,'의심')
         elif count == 3:
-            if prev_count == 2:
+            if prev_count == 2 and self.recvidio:
                 self.stop_recording()  # 이전 녹화 중지
                 self.recvidio = False
             if not self.recvidio:
                 self.recvidio = True
-                self.insert_log('강력', data[0])
-                print("녹화시작")
-                self.start_recording(name) # 녹화 시작         
+                self.insert_log('강력', name)  # name 변수 사용
+                print("COUNT 3 녹화시작")
+                self.start_recording(name,'강력')
         else:
             if self.recvidio:
                 print("녹화종료")
                 prev_count = 0
-                self.stop_recording() # 녹화 종료
+                self.stop_recording()  # 녹화 종료
                 self.recvidio = False
 
-    def start_recording(self,name):
+    def start_recording(self,name,type):
         if not self.recording:
             self.recording = True
             current_time = datetime.now()
             formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-            vidio_path = '../REC/'+formatted_time+'_'+name+'.avi'
+            vidio_path = '../REC/' + formatted_time + '_' + name + '_' + type + '.avi'
             fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 코덱 설정
             self.video_writer = cv2.VideoWriter(vidio_path, fourcc, 20.0, (1200, 300))  # VideoWriter 객체 생성
             self.insert_vidiopath(vidio_path)

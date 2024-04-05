@@ -6,8 +6,8 @@ class FaceDetector:
     def __init__(self, new_images, new_names):
         self.known_face_encodings = []
         self.known_face_names = []
-        self.age_list = ['(0 ~ 5)','(5 ~ 10)','(10 ~ 20)','(20 ~ 30)',
-                        '(30 ~ 50)','(50 ~ 70)','(70 ~ 100)','uknown']
+        self.age_list = ['( 0 ~ 10 )','( 10 ~ 15 )','( 15 ~ 20 )','( 20 ~ 30 )',
+                        '( 30 ~ 50 )','( 50 ~ 70 )','( 70 ~ 100 )','uknown']
         self.gender_list = ['Male', 'Female']
         self.load_known_faces(new_images, new_names)
         self.load_models(cascade_filename='model/haarcascade_frontalface_alt.xml',
@@ -32,7 +32,7 @@ class FaceDetector:
     def detect_faces_and_info(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
         results = self.cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(20,20))
-        info = ''
+        info = 'None,None, ( 0 ~ 1 )'
         for (x, y, w, h) in results:
             face = frame[y:y+h, x:x+w].copy()
             face_encoded = face_recognition.face_encodings(frame, [(y, x+w, y+h, x)])[0]
@@ -53,7 +53,7 @@ class FaceDetector:
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
             cv2.putText(frame, text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 204, 0), 2)
             cv2.putText(frame, f"{age_gender_info}",(x, y+h+15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            info = name+' '+age_gender_info
+            info = name+','+age_gender_info
 
         return frame,info
 
