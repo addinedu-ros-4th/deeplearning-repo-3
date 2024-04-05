@@ -3,7 +3,6 @@ import mediapipe as mp
 import numpy as np
 from time import sleep
 from ultralytics import YOLO
-# from perfect import UpperBodyExtractorThread
 from mediapipePose import mediapipePose
 from ArUcoMarker import ArUco
 from new_class import FaceDetector
@@ -16,60 +15,50 @@ import io
 from PIL import Image
 import os
 
-connection = mysql.connector.connect(
-                host="192.168.0.40",
-                user="YJS",
-                password="1234",
-                database="findperson"
-            )  
-
-new_images = []
-
-cursor = connection.cursor()
-query = "SELECT NAME FROM PERSON"
-cursor.execute(query)
-data = cursor.fetchall()    
-new_names = [name[0] for name in data if isinstance(name[0], str)]
-print(new_names)
-
-
-cursor = connection.cursor()
-query = "SELECT PICTURE FROM PERSON"
-cursor.execute(query)
-data = cursor.fetchall()    
-
-# 현재 스크립트의 경로를 얻습니다.
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# 저장할 이미지 폴더의 경로를 지정합니다.
-save_dir = os.path.join(current_dir, 'src')
-for i, image_data in enumerate(data):
-    image_binary = image_data[0]
-    image_stream = io.BytesIO(image_binary)
-    image = Image.open(image_stream)
-    image_path = os.path.join(save_dir, f"image_{new_names[i]}.png")
-    image.save(image_path)
-    new_images.append(f'src/image_{new_names[i]}.png')
-print(new_images)
-print("이미지 저장이 완료되었습니다.")
-
-mp_drawing = mp.solutions.drawing_utils
-mp_pose = mp.solutions.pose
-
-# 결합된 프레임 크기 설정
-combined_frame_width = 1280
-combined_frame_height = 960
-combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
-
-HOST = "192.168.0.40"
-#HOST = "192.168.0.9"
+HOST = "192.168.0.32"
 PORT1 = 9020  # 원본 프레임 수신용 포트
 PORT2 = 9021  # 처리 결과 전송용 포트
 PORT3 = 9022  # GUI RESULT 
 
+new_images=[]
+new_names=[]
 
-model = YOLO('yolov8n.pt')
-ff = FaceDetector(new_images,new_names)
+def sql_init(): 
+    global new_images,new_names
+    connection = mysql.connector.connect(
+                    host="192.168.0.40",
+                    user="YJS",
+                    password="1234",
+                    database="findperson"
+                )  
+
+    cursor = connection.cursor()
+    query = "SELECT NAME FROM PERSON"
+    cursor.execute(query)
+    data = cursor.fetchall()    
+    new_names = [name[0] for name in data if isinstance(name[0], str)]
+    print(new_names)
+
+
+    cursor = connection.cursor()
+    query = "SELECT PICTURE FROM PERSON"
+    cursor.execute(query)
+    data = cursor.fetchall()    
+
+    # 현재 스크립트의 경로를 얻습니다.
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # 저장할 이미지 폴더의 경로를 지정합니다.
+    save_dir = os.path.join(current_dir, 'src')
+    for i, image_data in enumerate(data):
+        image_binary = image_data[0]
+        image_stream = io.BytesIO(image_binary)
+        image = Image.open(image_stream)
+        image_path = os.path.join(save_dir, f"image_{new_names[i]}.png")
+        image.save(image_path)
+        new_images.append(f'src/image_{new_names[i]}.png')
+    print(new_images)
+    print("이미지 저장이 완료되었습니다.")
 
 def extract_average_color(image):
     # Calculate average color
@@ -80,8 +69,7 @@ def describe_rgb(rgb):
     red = rgb[2]
     green = rgb[1]
     blue = rgb[0]
-    # print(int(red),'',int(green),'',int(blue))
-    # 색상(RGB) 값을 색상 이름으로 변환
+    
     if red < 100 and green < 100 and blue < 100:
         color_name = 'Black'
     elif red > 150 and green > 150 and blue > 150:
@@ -175,6 +163,12 @@ def main():
     poseInst = mediapipePose()
     ArUconst = ArUco()
     k = 0.9 # 0.73
+    combined_frame_width = 1280
+    combined_frame_height = 960
+    combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
+
+    model = YOLO('yolov8n.pt')
+    ff = FaceDetector(new_images,new_names)
 
     server_socket_1,server_socket_2,server_socket_3=socket_init()
 
@@ -224,7 +218,7 @@ def main():
                 frame1 = np.copy(frame)
                 frame2 = np.copy(frame)
 
-                height = 'None'
+                height = 0
                 result2 = ArUconst.measureZcoordinate(frame2)
                 if (ArUconst.coordinateZ2 != 0):
                     # cv2.imshow('Pose Landmarks', result2)
@@ -263,5 +257,7 @@ def main():
 
 
 if __name__ == '__main__':
+    sql_init()
     main()
     sys.exit(0)
+
