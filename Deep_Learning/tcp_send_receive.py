@@ -143,9 +143,10 @@ def send_frame(conn, frame):
     # 데이터 전송
     conn.sendall(data)
 
-def send_result(conn, result):
+def send_result(conn, color, height, info):
     # 결과를 인코딩하여 전송
-    conn.sendall(result.encode())
+    conn.sendall((color + "," + str(height) + "," + info).encode())  # 색상, 높이, 정보 전송
+
 
 def socket_init():
     # 서버 소켓 생성 및 원본 프레임 수신용 포트에 바인딩
@@ -223,7 +224,7 @@ def main():
                 frame1 = np.copy(frame)
                 frame2 = np.copy(frame)
 
-
+                height = 0
                 result2 = ArUconst.measureZcoordinate(frame2)
                 if (ArUconst.coordinateZ2 != 0):
                     # cv2.imshow('Pose Landmarks', result2)
@@ -237,12 +238,13 @@ def main():
                     # cv2.imshow('Pose Landmarks', frame2)
                 # body_frame = gg.detect_pose(frame)
                 hand_frame,color = extract_upper_body(frame,model)
-                face_frame = ff.detect_faces_and_info(frame1)
+                face_frame,info = ff.detect_faces_and_info(frame1)
                 combined_frame = np.hstack((face_frame, pose_frame, hand_frame))
                 # combined_frame = np.hstack((face_frame, frame2, hand_frame))
+                
                 if client_socket2 and client_socket3:
                     send_frame(client_socket2, combined_frame)
-                    send_result(client_socket3,color)
+                    send_result(client_socket3,color,height,info)
                 else:
                     pass
                 #cv2.imshow("Received Frame", combined_frame)

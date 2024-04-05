@@ -22,6 +22,7 @@ connection = mysql.connector.connect(
                 database="findperson"
             )  
 person_data = []
+prev_count = 0
 class TcpServerThread(QThread):
     frame_received = pyqtSignal(np.ndarray)
 
@@ -140,6 +141,7 @@ class MainWindow(QMainWindow, from_class):
 
     def updateResult(self,color):
         global person_data
+        global prev_count
         count = 0
         self.resultColor.setText(color)
         name = None
@@ -149,14 +151,28 @@ class MainWindow(QMainWindow, from_class):
                 count = count+1
                 break
 
+        # target ='샘플'
 
-        if count == 1:
+        # if target != '언노운':
+        #     if self.recvidio:
+        #         self.stop_recording()  # 이전 녹화 중지
+        #         self.recvidio = False
+        #     prev_count = 4
+        #     self.insert_log('확정',data[0])
+        #     print("녹화시작")
+        #     self.start_recording(name)
+
+        if count == 2:
             if not self.recvidio:
                 self.recvidio = True
+                prev_count = 2
                 self.insert_log('의심', data[0])
                 print("녹화시작")
                 self.start_recording(name) # 녹화 시작
         elif count == 3:
+            if prev_count == 2:
+                self.stop_recording()  # 이전 녹화 중지
+                self.recvidio = False
             if not self.recvidio:
                 self.recvidio = True
                 self.insert_log('강력', data[0])
@@ -165,6 +181,7 @@ class MainWindow(QMainWindow, from_class):
         else:
             if self.recvidio:
                 print("녹화종료")
+                prev_count = 0
                 self.stop_recording() # 녹화 종료
                 self.recvidio = False
 
@@ -271,12 +288,6 @@ class MainWindow(QMainWindow, from_class):
             # 연결 종료
             cur.close()
             
-                
-            
-            
-
-
-    
     
     def insert_log(self,acc,name):
         current_time = datetime.now()
