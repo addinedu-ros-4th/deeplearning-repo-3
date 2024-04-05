@@ -12,7 +12,7 @@ import socket
 import struct
 import pickle
 import sys
-# import mysql.connector
+import mysql.connector
 import io
 from PIL import Image
 import os
@@ -22,38 +22,41 @@ import queue
 
 class MainServer:
     def __init__(self):
+        self.InitMysql()
         self.InitFace()
         self.InitPose()
         self.InitFashion()
         self.InitCombine()
         self.InitQueue()
         self.InitTCP()
-        # self.InitMysql()
+        
 
         # Thread define
+        self.pause_event_face = threading.Event()
+        self.pause_event_pose = threading.Event()
+        self.pause_event_fashion = threading.Event()
         self.exitFlag = threading.Event()
-        self.tcpReceiveThread = threading.Thread(target=self.tcpReceive, args=(self.client_socket_1, self.originFrameQueue))
+        self.tcpReceiveThread = threading.Thread(target=self.tcpReceive, args=(self.client_socket_1, self.originFrameQueue1, self.originFrameQueue2, self.originFrameQueue3))
         self.tcpReceiveThread.start()
 
-        self.fashionThread = threading.Thread(target=self.deeplearnFashion, args=(self.originFrameQueue, self.fashionQueue))
-        self.fashionThread.start()
-        self.faceThread = threading.Thread(target=self.deeplearnFace, args=(self.originFrameQueue, self.faceQueue))
+        
+        self.faceThread = threading.Thread(target=self.deeplearnFace, args=(self.originFrameQueue1, self.faceQueue))
         self.faceThread.start()
-        self.poseThread = threading.Thread(target=self.deeplearnPose, args=(self.originFrameQueue, self.poseQueue))
+        self.poseThread = threading.Thread(target=self.deeplearnPose, args=(self.originFrameQueue2, self.poseQueue))
         self.poseThread.start()
+        self.fashionThread = threading.Thread(target=self.deeplearnFashion, args=(self.originFrameQueue3, self.fashionQueue))
+        self.fashionThread.start()
         
 
         self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.faceQueue, self.poseQueue, self.fashionQueue))
-        # self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.originFrameQueue))
         self.tcpSendThread.start()
 
-        # gui_thread = threading.Thread(target=self.receive_GUI, args=(client_socket_3))
-        # gui_thread.start()
+        gui_thread = threading.Thread(target=self.receive_GUI, args=(self.client_socket_3))
+        gui_thread.start()
         print("start Thread")
 
     def InitTCP(self):
-        # HOST = "192.168.0.9"
-        HOST = "192.168.35.212"
+        HOST = "192.168.0.9"
         PORT1 = 9020  # 원본 프레임 수신용 포트
         PORT2 = 9021  # 처리 결과 GUI로 전송용 포트
         PORT3 = 9022  # GUI Result
@@ -98,8 +101,8 @@ class MainServer:
         query = "SELECT NAME FROM PERSON"
         cursor.execute(query)
         data = cursor.fetchall()    
-        new_names = [name[0] for name in data if isinstance(name[0], str)]
-        print(new_names)
+        self.new_names = [name[0] for name in data if isinstance(name[0], str)]
+        print(self.new_names)
 
         cursor = connection.cursor()
         query = "SELECT PICTURE FROM PERSON"
@@ -111,21 +114,21 @@ class MainServer:
 
         
         # 저장할 이미지 폴더의 경로를 지정합니다.
-        new_images = []
+        self.new_images = []
         save_dir = os.path.join(current_dir, 'src')
         for i, image_data in enumerate(data):
             image_binary = image_data[0]
             image_stream = io.BytesIO(image_binary)
             image = Image.open(image_stream)
-            image_path = os.path.join(save_dir, f"image_{new_names[i]}.png")
+            image_path = os.path.join(save_dir, f"image_{self.new_names[i]}.png")
             image.save(image_path)
-            new_images.append(f'src/image_{new_names[i]}.png')
-        print(new_images)
+            self.new_images.append(f'src/image_{self.new_names[i]}.png')
+        print(self.new_images)
         print("이미지 저장이 완료되었습니다.")
     
     def InitFace(self):
-        self.new_images = ["src/earnest.png", "src/jinhong.jpg", "src/jaesang.jpg"]
-        self.new_names = ["younghwan", "jinhong", "jaesang"]
+        # self.new_images = ["src/earnest.png", "src/jinhong.jpg", "src/jaesang.jpg"]
+        # self.new_names = ["younghwan", "jinhong", "jaesang"]
 
         self.faceInst = FaceDetector(self.new_images, self.new_names)
 
@@ -143,18 +146,23 @@ class MainServer:
         self.combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
 
     def InitQueue(self):
-        self.originFrameQueue = queue.Queue(maxsize=100) 
+        # self.originFrameQueue = queue.Queue(maxsize=100) 
         self.faceQueue = queue.Queue(maxsize=100)
         self.poseQueue = queue.Queue(maxsize=100)
         self.fashionQueue = queue.Queue(maxsize=100)
+
+        # test########################
+        self.originFrameQueue1 = queue.Queue(maxsize=100)
+        self.originFrameQueue2 = queue.Queue(maxsize=100)
+        self.originFrameQueue3 = queue.Queue(maxsize=100)
         
-    
-    def tcpReceive(self, client_socket, originQ):
+    def tcpReceive(self, client_socket, originQ1, originQ2, originQ3):
         data = b""
         payload_size = struct.calcsize("L")
         # while True:
         try:
             while not self.exitFlag.is_set():
+                # startTime = time.time()
                 # 데이터 수신
                 while len(data) < payload_size:
                     packet = client_socket.recv(4 * 1024)
@@ -181,9 +189,28 @@ class MainServer:
                 frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
                 frame = cv2.resize(frame, (640, 480))  # 프레임 크기 조정
 
-                originQ.put(np.copy(frame))
+                frame1 = np.copy(frame)
+                frame2 = np.copy(frame)
+                frame3 = np.copy(frame)
 
-                time.sleep(0.01)
+                originQ1.put(frame1)
+                originQ2.put(frame2)
+                originQ3.put(frame3)
+
+                # if originQ3.full():
+                #     print("Q is full")
+                #     self.pause_event_fashion.clear()
+                #     # self.fashionThread.start()
+                # else:
+                #     print("Q size : ", originQ3.qsize())
+                #     self.pause_event_fashion.set()
+
+                # endTime = time.time()
+                # deltaTime = endTime - startTime
+                # print("receive Time : ", deltaTime)
+
+                time.sleep(0.005) # pose
+                # time.sleep(0.01) # fashion
 
         except Exception as e:
             print("Error tcp Receive from Raspberry : ", e)
@@ -195,17 +222,23 @@ class MainServer:
     
     def deeplearnFace(self, originQ, faceQ):
         while not self.exitFlag.is_set():
+            # startTime = time.time()
             if not originQ.empty():
                 frame = originQ.get()
-                resultFrame = self.faceInst.detect_faces_and_info(frame)
+                resultFrame, self.info = self.faceInst.detect_faces_and_info(frame)
                 faceQ.put(resultFrame)
             else:
+                print("empty face")
                 pass
+            # endTime = time.time()
+            # deltaTime = endTime - startTime
+            # print("face Time : ", deltaTime, " sec")
 
             time.sleep(0.01)
 
     def deeplearnPose(self, originQ, poseQ):
         while not self.exitFlag.is_set():
+            # startTime = time.time()
             if not originQ.empty():
                 frame = originQ.get()
                 ArUcoResult = self.ArUcoInst.measureZcoordinate(frame)
@@ -213,28 +246,38 @@ class MainServer:
                 if (self.ArUcoInst.coordinateZ2 != 0):
                     resultFrame = self.poseInst.measureHeight(frame)
                     if (self.poseInst.pixelSum != 0):
-                        height = (self.poseInst.pixelSum * self.ArUcoInst.coordinateZ2 * self.ratio) + 15
+                        self.height = (self.poseInst.pixelSum * self.ArUcoInst.coordinateZ2 * self.ratio) + 15
                         cv2.putText(resultFrame, f'height: {height:.2f}cm', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 150, 0), 5)
                 else:
                     resultFrame = frame
-                    print("empty fashion")
 
                 self.poseQueue.put(resultFrame)
+            
+            # endTime = time.time()
+            # deltaTime = endTime - startTime
+            # print("pose Time : ", deltaTime, " sec")
 
-            time.sleep(0.01)
-            # time.sleep(0.005)
+            time.sleep(0.02)
+            # time.sleep(0.01)    # 제일 잘되는 시간
 
     def deeplearnFashion(self, originQ, fashionQ):
         while not self.exitFlag.is_set():
+            # startTime = time.time()
+            # self.pause_event_fashion.wait()
             if not originQ.empty():
                 frame = originQ.get()
-                resultFrame = self.extract_upper_body(frame, self.model)
+                resultFrame, self.color = self.extract_upper_body(frame, self.model)
                 fashionQ.put(resultFrame)
             else:
-                resultFrame = frame
                 print("empty fashion")
 
-            time.sleep(0.01)
+            # print("fashionQ size : ", originQ.qsize())
+
+            # endTime = time.time()
+            # deltaTime = endTime - startTime
+            # print("fashion Time : ", deltaTime, " sec")
+            
+            time.sleep(0.01) # 단일로 할떄 제일 잘되는 시간
 
     def extract_average_color(self, image):
         # Calculate average color
@@ -299,17 +342,34 @@ class MainServer:
     def tcpSend(self, client_socket, faceQ, poseQ, fashionQ):
         try:
             while not self.exitFlag.is_set():
-                faceFrame = faceQ.get()
-                poseFrame = poseQ.get()
-                fashionFrame = fashionQ.get()
+                # startTime = time.time()
+                # if (faceQ.full()) & (poseQ.full()) & (fashionQ.full()):
+                if (not faceQ.empty()) & (not poseQ.empty()) & (not fashionQ.empty()):
+                    faceFrame = faceQ.get()
+                    poseFrame = poseQ.get()
+                    fashionFrame = fashionQ.get()
 
-                combined_frame = np.hstack((faceFrame, poseFrame, fashionFrame))
+                    combined_frame = np.hstack((faceFrame, poseFrame, fashionFrame))
+                    # combined_frame = np.hstack((poseFrame, poseFrame, poseFrame))
 
-                if client_socket:
-                    self.send_frame(client_socket, combined_frame)
+                    if client_socket:
+                        self.send_frame(client_socket, combined_frame)
+                    else:
+                        print("fail send")
                 else:
-                    print("fail send")
-                time.sleep(0.01)
+                    faceFrame = faceQ.get()
+                    poseFrame = poseQ.get()
+                    fashionFrame = fashionQ.get()
+                    pass
+                    # print("face full : ", faceQ.full())
+                    # print("pose full : ", poseQ.full())
+                    # print("fashion full : ", fashionQ.full())
+                    
+
+                # endTime = time.time()
+                # deltaTime = endTime - startTime
+                # print("tcpSend Time : ", deltaTime, " sec")
+                time.sleep(0.01) # pose 단일로 테스트할때 제일 잘되는 타임
         except Exception as e:
             print("Error tcp send to GUI : ", e)
         finally:
@@ -327,8 +387,13 @@ class MainServer:
         # 데이터 전송
         conn.sendall(data)
     
-    def receive_GUI(self):
+    def send_result(self, conn, color, height, info):
+        conn.sendall((color + "," + str(height) + "," + info).encode())  # 색상, 높이, 정보 전송
+    
+    def fingResultToGUI(self):
         while not self.exitFlag.is_set():
+            if self.client_socket_2 and self.client_socket_3:
+                self.send_result(self.client_socket_3, self.color, self.height, self.info)
             print("3번 : {}".format(time.ctime(time.time())))
             time.sleep(3)
     

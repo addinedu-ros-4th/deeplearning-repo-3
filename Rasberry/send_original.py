@@ -8,19 +8,19 @@ import sys
 
 def send_video():
     # 카메라 설정
-    cap = cv2.VideoCapture(2)  # 카메라 장치 번호 설정 (일반적으로 0)
+    cap = cv2.VideoCapture(0)  # 카메라 장치 번호 설정 (일반적으로 0)
     # HOST = "192.168.0.40"
     HOST = "192.168.0.9"
     PORT = 9020
 
     while True:
-        print("start")
         try:
             # 소켓 생성 및 연결
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((HOST, PORT))  # 서버 IP 주소와 포트
             print("connected")
             while True:
+                # startTime = time.time()
                 ret, frame = cap.read()  # 프레임 캡처
                 if not ret:
                     break
@@ -35,8 +35,12 @@ def send_video():
 
                 # 데이터 전송
                 client_socket.sendall(data)
-                print("send complete")
-                time.sleep(0.01)
+                # print("send complete")
+                # endTime = time.time()
+                # deltaTime = endTime - startTime
+                # print("Time : ", deltaTime, " sec")
+                # time.sleep(0.005) # pose
+                time.sleep(0.01) # fashion
                 # time.sleep(3)
 
             # 소켓 종료
