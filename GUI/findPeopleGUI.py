@@ -13,7 +13,8 @@ from datetime import datetime
 
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
-HOST = "192.168.0.9"
+# HOST = "192.168.0.9"
+HOST = "192.168.35.212"
 
 # MySQL 서버에 대한 연결 설정
 # connection = mysql.connector.connect(

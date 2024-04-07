@@ -32,18 +32,27 @@ class MainServer:
 
         # Thread define
         self.exitFlag = threading.Event()
-        self.tcpReceiveThread = threading.Thread(target=self.tcpReceive, args=(self.client_socket_1, self.originFrameQueue))
+        self.tcpReceiveThread = threading.Thread(target=self.tcpReceive, args=(self.client_socket_1, self.originFrameQueue1))
         self.tcpReceiveThread.start()
 
-        self.fashionThread = threading.Thread(target=self.deeplearnFashion, args=(self.originFrameQueue, self.fashionQueue))
-        self.fashionThread.start()
-        self.faceThread = threading.Thread(target=self.deeplearnFace, args=(self.originFrameQueue, self.faceQueue))
-        self.faceThread.start()
-        self.poseThread = threading.Thread(target=self.deeplearnPose, args=(self.originFrameQueue, self.poseQueue))
-        self.poseThread.start()
+        # self.faceThread = threading.Thread(target=self.deeplearnFace, args=(self.originFrameQueue1, self.faceQueue))
+        # self.faceThread.start()
+        # self.poseThread = threading.Thread(target=self.deeplearnPose, args=(self.originFrameQueue2, self.poseQueue))
+        # self.poseThread.start()
+        # self.fashionThread = threading.Thread(target=self.deeplearnFashion, args=(self.originFrameQueue3, self.fashionQueue))
+        # self.fashionThread.start()
+
+        self.poseFashionThread = threading.Thread(target=self.deeplearn, args=(self.originFrameQueue1, self.originFrameQueue2, self.originFrameQueue3, self.faceQueue, self.poseQueue, self.fashionQueue))
+        self.poseFashionThread.start()
         
 
+        # self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.faceQueue, self.originFrameQueue1, self.originFrameQueue1))
+        # self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.originFrameQueue, self.poseQueue, self.originFrameQueue))
+        # self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.originFrameQueue, self.originFrameQueue, self.fashionQueue))
+
+        # self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.faceQueue, self.poseQueue, self.originFrameQueue1))
         self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.faceQueue, self.poseQueue, self.fashionQueue))
+
         # self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.client_socket_2, self.originFrameQueue))
         self.tcpSendThread.start()
 
@@ -143,13 +152,16 @@ class MainServer:
         self.combined_frame = np.zeros((combined_frame_height, combined_frame_width, 3), dtype=np.uint8)
 
     def InitQueue(self):
-        self.originFrameQueue = queue.Queue(maxsize=100) 
-        self.faceQueue = queue.Queue(maxsize=100)
-        self.poseQueue = queue.Queue(maxsize=100)
-        self.fashionQueue = queue.Queue(maxsize=100)
+        self.originFrameQueue1 = queue.Queue(maxsize=5)
+        self.originFrameQueue2 = queue.Queue(maxsize=5)
+        self.originFrameQueue3 = queue.Queue(maxsize=5)
+
+        self.faceQueue = queue.Queue(maxsize=5)
+        self.poseQueue = queue.Queue(maxsize=5)
+        self.fashionQueue = queue.Queue(maxsize=5)
         
     
-    def tcpReceive(self, client_socket, originQ):
+    def tcpReceive(self, client_socket, originQ1):
         data = b""
         payload_size = struct.calcsize("L")
         # while True:
@@ -181,9 +193,22 @@ class MainServer:
                 frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
                 frame = cv2.resize(frame, (640, 480))  # 프레임 크기 조정
 
-                originQ.put(np.copy(frame))
+                if self.originFrameQueue1.full():
+                    self.originFrameQueue1.get()
+                
+                if self.originFrameQueue2.full():
+                    self.originFrameQueue2.get()
 
-                time.sleep(0.01)
+                if self.originFrameQueue3.full():
+                    self.originFrameQueue3.get()
+
+
+                self.originFrameQueue1.put(np.copy(frame))
+                self.originFrameQueue2.put(np.copy(frame))
+                self.originFrameQueue3.put(np.copy(frame))
+
+                # time.sleep(0.01) #pose
+                time.sleep(0.001) # face
 
         except Exception as e:
             print("Error tcp Receive from Raspberry : ", e)
@@ -197,17 +222,21 @@ class MainServer:
         while not self.exitFlag.is_set():
             if not originQ.empty():
                 frame = originQ.get()
+                # print("originQ1 size : ", originQ.qsize())
                 resultFrame = self.faceInst.detect_faces_and_info(frame)
                 faceQ.put(resultFrame)
+                print("face Que size : ", faceQ.qsize())
             else:
                 pass
 
-            time.sleep(0.01)
+            time.sleep(0.002)  # best
+            # time.sleep(0.001)
 
     def deeplearnPose(self, originQ, poseQ):
         while not self.exitFlag.is_set():
             if not originQ.empty():
                 frame = originQ.get()
+                # print("originQ2 size : ", originQ.qsize())
                 ArUcoResult = self.ArUcoInst.measureZcoordinate(frame)
                 # self.ArUcoInst.measureZcoordinate(frame)
                 if (self.ArUcoInst.coordinateZ2 != 0):
@@ -219,22 +248,67 @@ class MainServer:
                     resultFrame = frame
                     print("empty fashion")
 
-                self.poseQueue.put(resultFrame)
+                poseQ.put(resultFrame)
+                print("pose Que size : ", poseQ.qsize())
 
-            time.sleep(0.01)
+            time.sleep(0.35)
             # time.sleep(0.005)
 
     def deeplearnFashion(self, originQ, fashionQ):
         while not self.exitFlag.is_set():
             if not originQ.empty():
                 frame = originQ.get()
-                resultFrame = self.extract_upper_body(frame, self.model)
+                resultFrame, color = self.extract_upper_body(frame, self.model)
                 fashionQ.put(resultFrame)
             else:
-                resultFrame = frame
-                print("empty fashion")
+                pass
 
-            time.sleep(0.01)
+            time.sleep(0.25)
+
+    def deeplearn(self, originQ1, originQ2, originQ3, faceQ, poseQ, fashionQ):
+        while not self.exitFlag.is_set():
+            if not originQ1.empty():
+                frame1 = originQ1.get()
+                # print("originQ1 size : ", originQ.qsize())
+                resultFrame1 = self.faceInst.detect_faces_and_info(frame1)
+
+                if faceQ.full():
+                    faceQ.get()
+
+                faceQ.put(resultFrame1)
+            else:
+                pass
+
+            if not originQ2.empty():
+                frame2 = originQ2.get()
+                # print("originQ2 size : ", originQ.qsize())
+                ArUcoResult = self.ArUcoInst.measureZcoordinate(frame2)
+                # self.ArUcoInst.measureZcoordinate(frame)
+                if (self.ArUcoInst.coordinateZ2 != 0):
+                    resultFrame2 = self.poseInst.measureHeight(frame2)
+                    if (self.poseInst.pixelSum != 0):
+                        height = (self.poseInst.pixelSum * self.ArUcoInst.coordinateZ2 * self.ratio) + 15
+                        cv2.putText(resultFrame2, f'height: {height:.2f}cm', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 150, 0), 5)
+                else:
+                    resultFrame2 = frame2
+
+                if poseQ.full():
+                    poseQ.get()
+
+                poseQ.put(resultFrame2)
+
+            if not originQ3.empty():
+                frame3 = originQ3.get()
+                resultFrame3, color = self.extract_upper_body(frame3, self.model)
+
+                if fashionQ.full():
+                    fashionQ.get()
+                
+                fashionQ.put(resultFrame3)
+            else:
+                pass
+
+            time.sleep(0.001)
 
     def extract_average_color(self, image):
         # Calculate average color
@@ -303,13 +377,17 @@ class MainServer:
                 poseFrame = poseQ.get()
                 fashionFrame = fashionQ.get()
 
-                combined_frame = np.hstack((faceFrame, poseFrame, fashionFrame))
+                print("send poseQ size : ", faceQ.qsize())
+                print("send poseQ size : ", poseQ.qsize())
+                # print("send poseQ size : ", fashionQ.qsize())
+
+                self.combined_frame = np.hstack((faceFrame, poseFrame, fashionFrame))
 
                 if client_socket:
-                    self.send_frame(client_socket, combined_frame)
+                    self.send_frame(client_socket, self.combined_frame)
                 else:
                     print("fail send")
-                time.sleep(0.01)
+                time.sleep(0.001)
         except Exception as e:
             print("Error tcp send to GUI : ", e)
         finally:
@@ -342,9 +420,10 @@ class MainServer:
         
         self.exitFlag.set()
         self.tcpReceiveThread.join()
-        self.faceThread.join()
-        self.poseThread.join()
-        self.fashionThread.join()
+        # self.faceThread.join()
+        # self.poseThread.join()
+        # self.fashionThread.join()
+        self.poseFashionThread.join()
         self.tcpSendThread.join()
         # gui_thread.join()
 
