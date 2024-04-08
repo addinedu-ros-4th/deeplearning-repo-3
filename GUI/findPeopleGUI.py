@@ -13,7 +13,7 @@ from datetime import datetime
 import time
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
-HOST = "192.168.0.40"
+HOST = "192.168.0.9"
 # MySQL 서버에 대한 연결 설정
 connection = mysql.connector.connect(
                 host="192.168.0.40",
@@ -146,7 +146,6 @@ class MainWindow(QMainWindow, from_class):
         global person_data
         name = None
         count = 0
-        self.resultColor.setText(result)
         parsed_result = result.split(',')
         if len(parsed_result) >= 5:
             # 각 요소를 순서대로 변수에 할당

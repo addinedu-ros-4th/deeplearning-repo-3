@@ -35,8 +35,7 @@ def send_video():
                 # 데이터 전송
                 client_socket.sendall(data)
                 print("send complete")
-                time.sleep(0.25)
-                # time.sleep(3)
+                time.sleep(0.001)
 
             # 소켓 종료
             # client_socket.close()
