@@ -15,7 +15,7 @@ import io
 from PIL import Image
 import os
 
-HOST = "192.168.0.32"
+HOST = "192.168.0.40"
 PORT1 = 9020  # 원본 프레임 수신용 포트
 PORT2 = 9021  # 처리 결과 전송용 포트
 PORT3 = 9022  # GUI RESULT 

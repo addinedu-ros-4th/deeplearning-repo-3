@@ -10,7 +10,7 @@ import pickle
 import sys
 import mysql.connector
 from datetime import datetime
-import re
+import time
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
 HOST = "192.168.0.40"
@@ -22,7 +22,9 @@ connection = mysql.connector.connect(
                 database="findperson"
             )  
 person_data = []
-prev_count = 0
+prev_logname = ''
+prev_logacc =''
+
 class TcpServerThread(QThread):
     frame_received = pyqtSignal(np.ndarray)
 
@@ -97,10 +99,11 @@ class MainWindow(QMainWindow, from_class):
         self.tcpThread2.start()
         self.tcpThread2.result_received.connect(self.updateResult)
 
-        self.recvidio = False
-        self.recording = False  # 녹화 중인지 여부를 나타내는 플래그
-        self.video_writer = None  # VideoWriter 객체
-        
+        self.fourcc = None
+        self.out = None
+        self.frame_count = 0
+        self.filepath = None
+
         self.PersonADD.clicked.connect(self.insert_person)
         self.pictureUpload.clicked.connect(self.fileopen)
         self.LogEdit.itemDoubleClicked.connect(self.play_video)
@@ -112,7 +115,7 @@ class MainWindow(QMainWindow, from_class):
 
         # 데이터베이스에서 해당 ID의 VIDEO_PATH 가져오기
         cursor = connection.cursor()
-        query = "SELECT VIDEO_PATH FROM REC_VIDIO WHERE LOG_ID = %s"
+        query = "SELECT VIDEO_PATH FROM LOG WHERE ID = %s"
         cursor.execute(query, (item_id,))
         result = cursor.fetchone()
         cursor.close()
@@ -131,7 +134,7 @@ class MainWindow(QMainWindow, from_class):
                     break
                 
                 cv2.imshow("Video", frame)
-                if cv2.waitKey(30) & 0xFF == ord('q'):  # 'q' 키를 누르면 종료
+                if cv2.waitKey(250) & 0xFF == ord('q'):  # 'q' 키를 누르면 종료
                     break
             
             cap.release()
@@ -141,7 +144,6 @@ class MainWindow(QMainWindow, from_class):
 
     def updateResult(self,result):
         global person_data
-        global prev_count
         name = None
         count = 0
         self.resultColor.setText(result)
@@ -151,17 +153,19 @@ class MainWindow(QMainWindow, from_class):
             rcolor = parsed_result[0]
             rheight = parsed_result[1]
             rname = parsed_result[2]
+            rgender = parsed_result[3]
             rage = parsed_result[4]
             parse_age = rage.split(' ')
             min_range = int(parse_age[2])
             max_range = int(parse_age[4])
 
+        
         for data in person_data:
             if rname in data[0]:
+                name=data[0]
                 count = 4
-                name = data[0]
                 break
-            elif rheight in data[2]:
+            elif float(data[2]) - 5 <= float(rheight) <= float(data[2]) + 5:
                 count += 1  # count를 1씩 증가시킴
             elif rcolor in data[3]:
                 name = data[0]
@@ -169,66 +173,55 @@ class MainWindow(QMainWindow, from_class):
             elif min_range <= int(data[4]) <= max_range:
                 name = data[0]
                 count += 1  # count를 1씩 증가시킴
-
-        if count == 4:
-            if self.recvidio:
-                self.stop_recording()  # 이전 녹화 중지
-                self.recvidio = False
-            self.insert_log('확정', name)  # name 변수 사용
-            print("COUNT 4 녹화시작")
-            self.start_recording(name,'확정'),
-        elif count == 2:
-            if not self.recvidio:
-                self.recvidio = True
-                prev_count = 2
-                self.insert_log('의심', name)  # name 변수 사용
-                print("COUNT 2 녹화시작")
-                self.start_recording(name,'의심')
+            elif rgender in data[1]:
+                name = data[0]
+                count += 1  # count를 1씩 증가시킴
+                
+        if count == 2:
+            self.insert_log('의심', name)
         elif count == 3:
-            if prev_count == 2 and self.recvidio:
-                self.stop_recording()  # 이전 녹화 중지
-                self.recvidio = False
-            if not self.recvidio:
-                self.recvidio = True
-                self.insert_log('강력', name)  # name 변수 사용
-                print("COUNT 3 녹화시작")
-                self.start_recording(name,'강력')
-        else:
-            if self.recvidio:
-                print("녹화종료")
-                prev_count = 0
-                self.stop_recording()  # 녹화 종료
-                self.recvidio = False
+            self.insert_log('강력', name)  # name 변수 사용
+        if count == 4:
+            self.insert_log('확정', name)
 
-    def start_recording(self,name,type):
-        if not self.recording:
-            self.recording = True
-            current_time = datetime.now()
-            formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-            vidio_path = '../REC/' + formatted_time + '_' + name + '_' + type + '.avi'
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 코덱 설정
-            self.video_writer = cv2.VideoWriter(vidio_path, fourcc, 20.0, (1200, 300))  # VideoWriter 객체 생성
-            self.insert_vidiopath(vidio_path)
-
-    def stop_recording(self):
-        if self.recording:
-            self.recording = False
-            self.video_writer.release()  # VideoWriter 객체 닫기
-
-        
 
     def updateFrame(self, frame):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        if self.recording:
-            self.video_writer.write(frame_rgb)  # 녹화 중이면 프레임을 동영상에 추가
-
         h, w, ch = frame_rgb.shape
         bytes_per_line = ch * w
         qq_img = QImage(frame_rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qq_img)
         self.labelPixmapFashion.setPixmap(pixmap.scaled(
             self.labelPixmapFashion.width(), self.labelPixmapFashion.height(), Qt.KeepAspectRatio))
+        
+        if self.out == None:
+            self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            current_time = datetime.now()
+            formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+            self.filepath = '../REC/'+formatted_time+'.avi'
+            self.out = cv2.VideoWriter(self.filepath, self.fourcc, 4.0, (w, h))
+        else:
+            if self.frame_count < 60:
+                self.out.write(frame)
+                self.frame_count += 1
+            else:
+                self.frame_count = 0
+                self.out = None
+            
+        
+        
+    def startRecording(self):
+        current_time = datetime.now()
+        formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+        self.frame_count = 0
+        # 비디오 파일 이름에 타임스탬프를 붙여 새로운 파일 생성
+        filename = '../REC/'+formatted_time + ".avi"
+        self.video_writer = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), 30, (640, 480))
+        self.recording = True
+
+    def stopRecording(self):
+        self.recording = False
+        self.video_writer.release()
 
     def fileopen(self):
         filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File') 
@@ -287,12 +280,12 @@ class MainWindow(QMainWindow, from_class):
     def select_log(self):
             # 데이터베이스에서 모든 레코드 가져오기
             cur = connection.cursor()
-            cur.execute("SELECT ID, FINDTIME, ACCURACY,NAME FROM LOG")
+            cur.execute("SELECT ID, FINDTIME, ACCURACY,NAME,ROBOT_ID FROM LOG")
             logs = cur.fetchall()
 
             self.LogEdit.setRowCount(len(logs))
-            self.LogEdit.setColumnCount(3)
-            headers = ['ID','FINDTIME', 'ACC', 'NAME']
+            self.LogEdit.setColumnCount(5)
+            headers = ['ID','FINDTIME', 'ACC', 'NAME','ROBOT_ID']
             self.LogEdit.setHorizontalHeaderLabels(headers)
 
             # 데이터 채우기
@@ -305,12 +298,21 @@ class MainWindow(QMainWindow, from_class):
             
     
     def insert_log(self,acc,name):
+        global prev_logname
+        global prev_logacc
+
+        if prev_logacc == acc and prev_logname == name:
+            return
+        else:
+            prev_logname = name
+            prev_logacc = acc
+
         current_time = datetime.now()
         formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
 
         cursor = connection.cursor()
-        query = "INSERT INTO LOG (FINDTIME,ACCURACY,NAME) VALUES (%s, %s,%s)"
-        values = (formatted_time, acc,name)
+        query = "INSERT INTO LOG (FINDTIME,ACCURACY,NAME,VIDEO_PATH,ROBOT_ID) VALUES (%s, %s,%s,%s,%s)"
+        values = (formatted_time, acc,name,self.filepath,1)
         cursor.execute(query, values)
         connection.commit()
         # 연결 종료

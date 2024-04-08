@@ -10,7 +10,7 @@ def send_video():
     # 카메라 설정
     cap = cv2.VideoCapture(0)  # 카메라 장치 번호 설정 (일반적으로 0)
     # HOST = "192.168.0.40"
-    HOST = "192.168.0.32"
+    HOST = "192.168.0.40"
     PORT = 9020
 
     while True:
