@@ -10,7 +10,7 @@
 
 -------------------------------------
 ## 시스템 구성도
-![deeplearning_repo_3](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/156267935/053eac01-94a3-4d28-bb59-03eb2e7a195c)
+![Screenshot from 2024-04-08 15-03-14](https://github.com/addinedu-ros-4th/deeplearning-repo-3/assets/156267935/5d1d19dd-33f4-480c-ab49-c1d60a301881)
 
 -------------------------------------
 ## 기능리스트
