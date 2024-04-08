@@ -34,26 +34,15 @@ class MainServer:
         self.tcpReceiveThread = threading.Thread(target=self.tcpReceive, args=(self.client_socket_1, self.originFrameQueue1))
         self.tcpReceiveThread.start()
 
-        # self.faceThread = threading.Thread(target=self.deeplearnFace, args=(self.originFrameQueue1, self.faceQueue))
-        # self.faceThread.start()
-        # self.poseThread = threading.Thread(target=self.deeplearnPose, args=(self.originFrameQueue2, self.poseQueue))
-        # self.poseThread.start()
-        # self.fashionThread = threading.Thread(target=self.deeplearnFashion, args=(self.originFrameQueue3, self.fashionQueue))
-        # self.fashionThread.start()
-
         self.deeplearnThread = threading.Thread(target=self.deeplearn, args=(self.originFrameQueue1, self.originFrameQueue2, self.originFrameQueue3, self.faceQueue, self.poseQueue, self.fashionQueue))
         self.deeplearnThread.start()
 
         self.tcpSendThread = threading.Thread(target=self.tcpSend, args=(self.faceQueue, self.poseQueue, self.fashionQueue))
         self.tcpSendThread.start()
-
-        # gui_thread = threading.Thread(target=self.receive_GUI, args=(client_socket_3))
-        # gui_thread.start()
         print("start Thread")
 
     def InitTCP(self):
-        HOST = "192.168.0.40"
-        # HOST = "192.168.35.212"
+        HOST = "192.168.0.40" # server pc IP
         PORT1 = 9020  # 원본 프레임 수신용 포트
         PORT2 = 9021  # 처리 결과 GUI로 전송용 포트
         PORT3 = 9022  # GUI Result
@@ -87,6 +76,7 @@ class MainServer:
         print(f"연결 수락됨 from {addr3}")
 
     def InitMysql(self):
+        # DB Address
         connection = mysql.connector.connect(
                 host="192.168.0.40",
                 user="YJS",
@@ -125,9 +115,6 @@ class MainServer:
         print("이미지 저장이 완료되었습니다.")
     
     def InitFace(self):
-        # self.new_images = ["src/earnest.png", "src/jinhong.jpg", "src/jaesang.jpg"]
-        # self.new_names = ["younghwan", "jinhong", "jaesang"]
-
         self.faceInst = FaceDetector(self.new_images, self.new_names)
 
     def InitPose(self):
@@ -151,7 +138,6 @@ class MainServer:
         self.faceQueue = queue.Queue(maxsize=5)
         self.poseQueue = queue.Queue(maxsize=5)
         self.fashionQueue = queue.Queue(maxsize=5)
-        
     
     def tcpReceive(self, client_socket, originQ1):
         data = b""
@@ -198,7 +184,6 @@ class MainServer:
                 self.originFrameQueue2.put(np.copy(frame))
                 self.originFrameQueue3.put(np.copy(frame))
 
-                # time.sleep(0.01) #pose
                 time.sleep(0.001) # face
 
         except Exception as e:
@@ -207,55 +192,7 @@ class MainServer:
             print("Server stop command occurred")
         finally:
             self.stop()
-            
-    
-    def deeplearnFace(self, originQ, faceQ):
-        while not self.exitFlag.is_set():
-            if not originQ.empty():
-                frame = originQ.get()
-                # print("originQ1 size : ", originQ.qsize())
-                resultFrame = self.faceInst.detect_faces_and_info(frame)
-                faceQ.put(resultFrame)
-                print("face Que size : ", faceQ.qsize())
-            else:
-                pass
-
-            time.sleep(0.002)  # best
-            # time.sleep(0.001)
-
-    def deeplearnPose(self, originQ, poseQ):
-        while not self.exitFlag.is_set():
-            if not originQ.empty():
-                frame = originQ.get()
-                # print("originQ2 size : ", originQ.qsize())
-                ArUcoResult = self.ArUcoInst.measureZcoordinate(frame)
-                # self.ArUcoInst.measureZcoordinate(frame)
-                if (self.ArUcoInst.coordinateZ2 != 0):
-                    resultFrame = self.poseInst.measureHeight(frame)
-                    if (self.poseInst.pixelSum != 0):
-                        self.height = (self.poseInst.pixelSum * self.ArUcoInst.coordinateZ2 * self.ratio) + 15
-                        cv2.putText(resultFrame, f'height: {self.height:.2f}cm', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 150, 0), 5)
-                else:
-                    resultFrame = frame
-                    print("empty fashion")
-
-                poseQ.put(resultFrame)
-                print("pose Que size : ", poseQ.qsize())
-
-            time.sleep(0.35)
-            # time.sleep(0.005)
-
-    def deeplearnFashion(self, originQ, fashionQ):
-        while not self.exitFlag.is_set():
-            if not originQ.empty():
-                frame = originQ.get()
-                resultFrame, color = self.extract_upper_body(frame, self.model)
-                fashionQ.put(resultFrame)
-            else:
-                pass
-
-            time.sleep(0.25)
-
+             
     def deeplearn(self, originQ1, originQ2, originQ3, faceQ, poseQ, fashionQ):
         while not self.exitFlag.is_set():
             if not originQ1.empty():
@@ -272,9 +209,7 @@ class MainServer:
 
             if not originQ2.empty():
                 frame2 = originQ2.get()
-                # print("originQ2 size : ", originQ.qsize())
                 ArUcoResult = self.ArUcoInst.measureZcoordinate(frame2)
-                # self.ArUcoInst.measureZcoordinate(frame)
                 if (self.ArUcoInst.coordinateZ2 != 0):
                     resultFrame2 = self.poseInst.measureHeight(frame2)
                     if (self.poseInst.pixelSum != 0):
@@ -413,12 +348,8 @@ class MainServer:
         
         self.exitFlag.set()
         self.tcpReceiveThread.join()
-        # self.faceThread.join()
-        # self.poseThread.join()
-        # self.fashionThread.join()
         self.deeplearnThread.join()
         self.tcpSendThread.join()
-        # gui_thread.join()
 
         print("Terminate server!")
         sys.exit(0)

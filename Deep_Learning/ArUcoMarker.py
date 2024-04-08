@@ -22,6 +22,7 @@ class ArUco:
             gray, cv2.aruco_dict, parameters=parameters
         )
         # print(f"ids : {ids}")
+        
         # If markers are detected
         if len(corners) > 0:
             # print("debug")
@@ -44,9 +45,6 @@ class ArUco:
                     self.coordinateZ2 = self.coordinateZ * 0.24 # 0.3
                 else:
                     self.coordinateZ2 = self.coordinateZ * 0.23 # 0.3
-                
-                # coordinateZ = coordinateZ * 0.8
-                # print("Z : ", self.coordinateZ)
 
                 cv2.aruco.drawDetectedMarkers(frame, corners)
                 cv2.putText(frame, f'Distance: {self.coordinateZ:.2f}m', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (73, 156, 250), 2)
@@ -57,27 +55,3 @@ class ArUco:
         # cv2.imshow('Estimated Pose', frame)
 
         return frame
-    
-
-# if __name__ == "__main__":
-#     ArUconst = ArUco()
-
-#     # 웹캠 캡처 설정
-#     cap = cv2.VideoCapture(0)
-
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-#         if not ret:
-#             continue
-
-#         result = ArUconst.measureZcoordinate(frame)
-        
-
-#         cv2.imshow('ArUco', result)
-
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
-
-#     # 자원 해제
-#     cap.release()
-#     cv2.destroyAllWindows()

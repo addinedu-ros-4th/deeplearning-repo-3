@@ -33,8 +33,6 @@ class TcpServerThread(QThread):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((HOST, 9021))
         
-
-
     def run(self):
         data = b""
         payload_size = struct.calcsize("L")
@@ -63,6 +61,7 @@ class TcpServerThread(QThread):
         finally:
             self.client_socket.close()
 
+
 class TcpServerThread2(QThread):
     result_received = pyqtSignal(str)
 
@@ -80,7 +79,6 @@ class TcpServerThread2(QThread):
 
         finally:
             self.client_socket.close()
-
 
 
 class MainWindow(QMainWindow, from_class):
@@ -159,7 +157,6 @@ class MainWindow(QMainWindow, from_class):
             min_range = int(parse_age[2])
             max_range = int(parse_age[4])
 
-        
         for data in person_data:
             count =0
             result_set.clear()
@@ -189,8 +186,6 @@ class MainWindow(QMainWindow, from_class):
             self.resultLogText(count,name,result_set)
             
             
-
-
     def resultLogText(self,count,name,result_set ):
         text =''
         if count == 4:
@@ -216,9 +211,6 @@ class MainWindow(QMainWindow, from_class):
                 self.labelResult.setText(text)
         else:   
              self.labelResult.setText('')
-
-        
-        
     
 
     def updateFrame(self, frame):
@@ -244,7 +236,6 @@ class MainWindow(QMainWindow, from_class):
                 self.frame_count = 0
                 self.out = None
             
-        
         
     def startRecording(self):
         current_time = datetime.now()
@@ -288,7 +279,6 @@ class MainWindow(QMainWindow, from_class):
         cursor.close()
         self.select_person()
         
-
 
     def select_person(self):
     # 데이터베이스에서 데이터 가져오기
