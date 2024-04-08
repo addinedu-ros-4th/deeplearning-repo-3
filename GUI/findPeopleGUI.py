@@ -13,7 +13,7 @@ from datetime import datetime
 import time
 
 from_class = uic.loadUiType("findPeopleGUI.ui")[0]
-HOST = "192.168.0.9"
+HOST = "192.168.0.40"
 # MySQL 서버에 대한 연결 설정
 connection = mysql.connector.connect(
                 host="192.168.0.40",
@@ -144,6 +144,7 @@ class MainWindow(QMainWindow, from_class):
 
     def updateResult(self,result):
         global person_data
+        result_set = set()
         name = None
         count = 0
         parsed_result = result.split(',')
@@ -160,29 +161,65 @@ class MainWindow(QMainWindow, from_class):
 
         
         for data in person_data:
+            count =0
+            result_set.clear()
+
             if rname in data[0]:
                 name=data[0]
                 count = 4
+                self.resultLogText(count,name,result_set)
                 break
-            elif float(data[2]) - 5 <= float(rheight) <= float(data[2]) + 5:
-                count += 1  # count를 1씩 증가시킴
-            elif rcolor in data[3]:
+            if float(data[2]) - 5 <= float(rheight) <= float(data[2]) + 5:
                 name = data[0]
                 count += 1  # count를 1씩 증가시킴
-            elif min_range <= int(data[4]) <= max_range:
+                result_set.add('키')
+            if rcolor in data[3]:
                 name = data[0]
                 count += 1  # count를 1씩 증가시킴
-            elif rgender in data[1]:
+                result_set.add('상의')
+            if min_range <= int(data[4]) <= max_range:
                 name = data[0]
                 count += 1  # count를 1씩 증가시킴
-                
-        if count == 2:
-            self.insert_log('의심', name)
-        elif count == 3:
-            self.insert_log('강력', name)  # name 변수 사용
-        if count == 4:
-            self.insert_log('확정', name)
+                result_set.add('나이')
+            if rgender in data[1]:
+                name = data[0]
+                count += 1  # count를 1씩 증가시킴
+                result_set.add('성별')
 
+            self.resultLogText(count,name,result_set)
+            
+            
+
+
+    def resultLogText(self,count,name,result_set ):
+        text =''
+        if count == 4:
+                self.insert_log('확정', name)
+                text = name+'님 확정'
+                self.labelResult.setStyleSheet("Color : red")
+                self.labelResult.setText(text)
+                return
+        elif count == 3:
+                self.insert_log('강력', name)  # name 변수 사용
+                for acc in result_set:
+                    text += acc+' '
+                text += ' 일치 '+name+'님 강력'
+                self.labelResult.setStyleSheet("Color : blue")
+                self.labelResult.setText(text)
+        elif count == 2:
+                self.insert_log('의심', name)
+                text = ''
+                for acc in result_set:
+                    text += acc+' '
+                text +=  ' 일치 '+ name+'님' +' 의심'
+                self.labelResult.setStyleSheet("Color : green")
+                self.labelResult.setText(text)
+        else:   
+             self.labelResult.setText('')
+
+        
+        
+    
 
     def updateFrame(self, frame):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

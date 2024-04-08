@@ -41,7 +41,7 @@ class FaceDetector:
             match_percentage = (1 - face_distances[best_match_index]) * 100
             age_gender_info = self.detect_age_and_gender(face)
 
-            if match_percentage >= 60:
+            if match_percentage >= 70:
                 name = self.known_face_names[best_match_index]
                 text = f"{name} ({match_percentage:.2f}%)"
                 if match_percentage >= 80:
@@ -50,9 +50,9 @@ class FaceDetector:
                 name = "Unknown"
                 text = name
 
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            cv2.putText(frame, text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 204, 0), 2)
-            cv2.putText(frame, f"{age_gender_info}",(x, y+h+15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 204, 0), 2)
+            cv2.putText(frame, text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(frame, f"{age_gender_info}",(x, y+h+15), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 204, 0), 2)
             info = name+','+age_gender_info
 
         return frame,info

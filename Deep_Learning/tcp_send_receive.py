@@ -52,7 +52,7 @@ class MainServer:
         print("start Thread")
 
     def InitTCP(self):
-        HOST = "192.168.0.9"
+        HOST = "192.168.0.40"
         # HOST = "192.168.35.212"
         PORT1 = 9020  # 원본 프레임 수신용 포트
         PORT2 = 9021  # 처리 결과 GUI로 전송용 포트
@@ -356,7 +356,7 @@ class MainServer:
                     upper_body_roi = roi[upper_body_region[1]:upper_body_region[3], upper_body_region[0]:upper_body_region[2]]
                     average_color = self.extract_average_color(upper_body_roi)
                     color = self.describe_rgb(average_color)
-                    cv2.putText(frame, color, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)  # 색상 이름 출력
+                    cv2.putText(frame, color, (x1, y1 + 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)  # 색상 이름 출력
                     ##upper_body_roi 영역으로 opencv 색 검출 로직 추가 하면됨
                     result_color = color
 
