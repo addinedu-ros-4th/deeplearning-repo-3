@@ -42,38 +42,45 @@ class MainServer:
         print("start Thread")
 
     def InitTCP(self):
-        HOST = "192.168.0.40" # server pc IP
-        PORT1 = 9020  # 원본 프레임 수신용 포트
-        PORT2 = 9021  # 처리 결과 GUI로 전송용 포트
-        PORT3 = 9022  # GUI Result
+        try:
+            HOST = "192.168.0.40" # server pc IP
+            PORT1 = 9020  # 원본 프레임 수신용 포트
+            PORT2 = 9021  # 처리 결과 GUI로 전송용 포트
+            PORT3 = 9022  # GUI Result
 
-        # 서버 소켓 생성 및 원본 프레임 수신용 포트에 바인딩
-        # receive origin camera frame from Raspberry
-        self.server_socket_1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket_1.bind((HOST, PORT1))
-        self.server_socket_1.listen(5)
+            # 서버 소켓 생성 및 원본 프레임 수신용 포트에 바인딩
+            # receive origin camera frame from Raspberry
+            self.server_socket_1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket_1.bind((HOST, PORT1))
+            self.server_socket_1.listen(5)
 
-        # 서버 소켓 생성 및 처리 결과 전송용 포트에 바인딩
-        # send deeplearning result frame to GUI
-        self.server_socket_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket_2.bind((HOST, PORT2))
-        self.server_socket_2.listen(5)
+            # 서버 소켓 생성 및 처리 결과 전송용 포트에 바인딩
+            # send deeplearning result frame to GUI
+            self.server_socket_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket_2.bind((HOST, PORT2))
+            self.server_socket_2.listen(5)
 
-        # GUI
-        # bidirectional signal communication from GUI
-        self.server_socket_3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket_3.bind((HOST, PORT3))
-        self.server_socket_3.listen(1)
+            # GUI
+            # bidirectional signal communication from GUI
+            self.server_socket_3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket_3.bind((HOST, PORT3))
+            self.server_socket_3.listen(1)
 
-        print("waiting Cam connection")
-        self.client_socket_1, addr1 = self.server_socket_1.accept() # Raspberry
-        print(f"연결 수락됨 from {addr1}")
-        print("waiting GUI frame connection")
-        self.client_socket_2, addr2 = self.server_socket_2.accept() # GUI Frame
-        print(f"연결 수락됨 from {addr2}")
-        print("waiting GUI signal connection")
-        self.client_socket_3, addr3 = self.server_socket_3.accept() # GUI signal
-        print(f"연결 수락됨 from {addr3}")
+            print("waiting Cam connection")
+            self.client_socket_1, addr1 = self.server_socket_1.accept() # Raspberry
+            print(f"연결 수락됨 from {addr1}")
+            print("waiting GUI frame connection")
+            self.client_socket_2, addr2 = self.server_socket_2.accept() # GUI Frame
+            print(f"연결 수락됨 from {addr2}")
+            print("waiting GUI signal connection")
+            self.client_socket_3, addr3 = self.server_socket_3.accept() # GUI signal
+            print(f"연결 수락됨 from {addr3}")
+        except Exception as e:
+            print("TCP init Error : ", e)
+        except KeyboardInterrupt:
+            print("Server stop command occurred")
+        finally:
+            self.stop()
 
     def InitMysql(self):
         # DB Address
