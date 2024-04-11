@@ -25,6 +25,6 @@
 
 -------------------------------------
 ## 시연영상(주소)
-https://youtu.be/T57jLTyiIHQ?si=mJBZmo5v7R4_73ZM
+[![Video Label](https://youtu.be/T57jLTyiIHQ?si=mJBZmo5v7R4_73ZM/0.jpg)](https://youtu.be/T57jLTyiIHQ?si=mJBZmo5v7R4_73ZM)
 
 -------------------------------------
